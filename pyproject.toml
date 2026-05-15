@@ -1,0 +1,16 @@
+[project]
+name = "topogenesis"
+version = "0.1.0"
+description = "Field-coupled artificial-life ecology platform"
+requires-python = ">=3.10"
+dependencies = [
+  "jax",
+  "numpy",
+  "optax",
+]
+
+[project.scripts]
+topogenesis = "experiments.run:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
