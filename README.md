@@ -42,6 +42,19 @@ python -m experiments.run --experiment open_ended_ecology
 
 Use `--engine-path` only when intentionally testing an alternate engine module.
 
+## Verification
+
+Local checks:
+
+```bash
+python -m unittest discover -s tests -p "test_*.py"
+python -m experiments.run --experiment smoke
+```
+
+GitHub Actions runs unit tests with `JAX_DISABLE_JIT=0`, a short smoke
+experiment, and a weekly/manual extended JIT smoke run. The manual workflow
+defaults to 2,000 steps for longer stability checks without slowing every push.
+
 ## Public Research Status
 
 The current release prioritizes transparency over polish:

@@ -3421,7 +3421,8 @@ class TopogenesisAgent:
       10. Compositional HRR binding (with cleanup)
       11. Global workspace broadcast (non-zero projection)
       12. Affect (valence / distress / arousal)
-      13. Policy sampling → action
+
+      13. Motor action synthesis
       14. Free energy computation + Lagrange multiplier update
       15. Hereditary replication on symbolic structure
       16. Memory store (SparseModularMemory)
@@ -3879,36 +3880,23 @@ class TopogenesisAgent:
 
     # ── Main step ────────────────────────────────────────────────────────────
 
-    def step(self, S0: np.ndarray, action: np.ndarray,
-             reward: float = 0.0, rng: Optional[jax.random.KeyArray] = None,
-             external_field: Optional[SigmaFieldGeometric] = None,
-             pump_field: bool = True) -> Tuple[np.ndarray, dict]:
-        if rng is None:
-            rng = jax.random.PRNGKey(self._step)
-        rng, key_wm, key_pol, key_info = random.split(rng, 4)
-        cog = self.config.cognition
-        if external_field is not None:
-            self.sigma_field = external_field
-            self.metastability_field.field = external_field
 
-        # ── 1. Encode observation ──────────────────────────────────────────
+    def _sensory_stage(self, S0: np.ndarray, reward: float) -> dict:
+        """Normalize observation input and update sensory-adjacent learners."""
         d_E = self.config.d_E
-        obs_np  = np.array(S0[:d_E] if len(S0) >= d_E
-                           else np.pad(S0, (0, d_E - len(S0))))
-        obs_jnp = jnp.array(obs_np, dtype=jnp.float32)
+        obs_np = np.array(S0[:d_E] if len(S0) >= d_E
+                          else np.pad(S0, (0, d_E - len(S0))), dtype=np.float32)
+        obs_jnp = jnp.asarray(obs_np, dtype=jnp.float32)
         viability, organism_obs = self._viability_from_obs(obs_jnp)
         viability_features = self._viability_features(obs_jnp)
 
-        # ── Supervenience quality gates (derived from body state cached by
-        #    self_maintain() before this call; always available this step) ──
-        _info_quality = self.info_supervenience.compute_quality(
+        info_quality = self.info_supervenience.compute_quality(
             self._current_si or {}, self._current_body_energy)
 
         self._adapt_viability_actor(viability, reward)
         self._update_enactive_actor_critic(viability, reward, viability_features)
         self._update_policy_online(viability, reward)
 
-        # Assemble full state vector
         S_full = self.ss.assemble(obs_jnp, self.deter_state,
                                   self.stoch_state[:self.config.d_I])
         peer_summary, world_summary, consequence_risk = self._update_auxiliary_context(
@@ -3918,46 +3906,58 @@ class TopogenesisAgent:
         if self.prev_prediction is None:
             wm_pred_mse = 0.0
         else:
-            wm_pred_mse = float(jnp.mean((jnp.array(self.prev_prediction) - S_full) ** 2))
+            wm_pred_mse = float(jnp.mean(
+                (jnp.asarray(self.prev_prediction, dtype=jnp.float32) - S_full) ** 2))
 
-        # ── 2. Project obs → n_slots features ─────────────────────
-        features = self._obs_to_features(obs_jnp)    # (1, n_slots, slot_dim)
+        return {
+            'obs_jnp': obs_jnp,
+            'viability': viability,
+            'organism_obs': organism_obs,
+            'viability_features': viability_features,
+            'info_quality': info_quality,
+            'S_full': S_full,
+            'peer_summary': peer_summary,
+            'world_summary': world_summary,
+            'consequence_risk': consequence_risk,
+            'wm_pred_mse': wm_pred_mse,
+        }
 
-        # ── 3. Slot attention → ObjectBus ──────────────────────────────────
+    def _attention_stage(self, obs_jnp: jnp.ndarray,
+                         key_wm: jax.random.KeyArray,
+                         pump_field: bool) -> dict:
+        """Project observations into object slots and update field/causal buses."""
+        cog = self.config.cognition
+        features = self._obs_to_features(obs_jnp)
         slots_init = self.prev_slots if self.prev_slots is not None else None
-        slots, attn_weights = self.slot_attn(features, key_wm, slots_init=slots_init)
-        slots_2d = slots[0]                             # (n_slots, slot_dim)
+        slots, _attn_weights = self.slot_attn(features, key_wm, slots_init=slots_init)
+        slots_2d = slots[0]
         self.prev_slots = slots
-        mask_np  = np.ones(cog.n_slots, dtype=np.float32)
+        mask_np = np.ones(cog.n_slots, dtype=np.float32)
 
-        # ── Metabolic supervenience: narrow attentional spotlight when starved ─
-        # Hungry agents deploy fewer slots — a smaller "spotlight of attention".
-        # The lowest-norm (least activated) slots are zeroed beyond the budget.
-        _n_active_slots = self.metabolic_super.attention_n_active(
+        n_active_slots = self.metabolic_super.attention_n_active(
             self._current_body_energy, cog.n_slots)
-        if _n_active_slots < cog.n_slots:
-            _slot_norms = jnp.linalg.norm(slots_2d, axis=-1)          # (n_slots,)
-            _sorted_idx = jnp.argsort(_slot_norms)                    # ascending
-            _active_mask = jnp.zeros(cog.n_slots).at[
-                _sorted_idx[cog.n_slots - _n_active_slots:]].set(1.0)
-            slots_2d = slots_2d * _active_mask[:, None]
-            mask_np  = np.array(_active_mask)
-        # ── Thermodynamic cost: slot attention iterations ────────────────────
+        if n_active_slots < cog.n_slots:
+            slot_norms = jnp.linalg.norm(slots_2d, axis=-1)
+            sorted_idx = jnp.argsort(slot_norms)
+            active_mask = jnp.zeros(cog.n_slots).at[
+                sorted_idx[cog.n_slots - n_active_slots:]].set(1.0)
+            slots_2d = slots_2d * active_mask[:, None]
+            mask_np = np.array(active_mask)
+
         self.cog_metabolism.charge(self.cog_metabolism.attention_cost(
-            _n_active_slots, self.slot_attn.iters, cog.slot_dim))
+            n_active_slots, self.slot_attn.iters, cog.slot_dim))
 
-        # Derive pseudo-positions from attention weights and scale to field space
-        slot_positions = jnp.zeros((cog.n_slots, 3))
-        # Spread slots evenly across field space (deterministic seed positions)
+        coords = []
+        grid_w = max(1, int(math.sqrt(cog.n_slots)))
         for i in range(cog.n_slots):
-            slot_positions = slot_positions.at[i].set(jnp.array([
+            coords.append([
                 float(i % cog.object_world_size),
-                float((i // int(math.sqrt(cog.n_slots))) % cog.object_world_size),
+                float((i // grid_w) % cog.object_world_size),
                 float(cog.world_depth // 2),
-            ]))
-        slot_energies = jnp.linalg.norm(slots_2d, axis=-1)    # (n_slots,)
+            ])
+        slot_positions = jnp.asarray(coords, dtype=jnp.float32)
+        slot_energies = jnp.linalg.norm(slots_2d, axis=-1)
 
-        # ── 4. Pump slots into sigma field PDE ───────────────────
         self.pending_slot_positions = slot_positions
         self.pending_slot_energies = slot_energies
         if pump_field:
@@ -3970,104 +3970,218 @@ class TopogenesisAgent:
                 pump_gain=cog.field_pump_gain,
             )
 
-        # ── 5. Causal learning + do-intervention ──────────────────────────
-        slots_np = np.array(slots_2d)
+        slots_np = np.array(slots_2d, dtype=np.float32)
         slots_np, interv_idx = self.causal_learner.maybe_intervene(
             slots_np, self._np_rng)
         self.causal_learner.update(slots_np)
-        cb = self.causal_learner.to_bus(jnp.array(slots_np))
+        cb = self.causal_learner.to_bus(jnp.asarray(slots_np, dtype=jnp.float32))
 
-        # ── 6. World model step ────────────────────────────────────────────
+        return {
+            'slots_2d': slots_2d,
+            'slots_np': slots_np,
+            'mask_np': mask_np,
+            'slot_positions': slot_positions,
+            'interv_idx': interv_idx,
+            'cb': cb,
+            'n_active_slots': n_active_slots,
+        }
+
+    def _world_model_stage(self, S_full: jnp.ndarray, action: np.ndarray,
+                           slot_positions: jnp.ndarray,
+                           key_wm: jax.random.KeyArray,
+                           wm_pred_mse: float) -> dict:
+        """Run field-conditioned predictive dynamics and update hidden state."""
+        cog = self.config.cognition
         t_enc = get_time_encoding(
-            jnp.array([float(self._step) * self.config.dt]),
-            jnp.array([10., 50., 200., 1000.]),
+            jnp.asarray([float(self._step) * self.config.dt], dtype=jnp.float32),
+            jnp.asarray([10., 50., 200., 1000.], dtype=jnp.float32),
             cog.time_embed_dim)
         field_ctx = jnp.zeros(cog.spatial_attn_out)
         try:
             field_patch = self.sigma_field.sample_patch(slot_positions[0], patch_size=4)
-            field_ctx   = field_patch[:cog.spatial_attn_out]
+            field_ctx = field_patch[:cog.spatial_attn_out]
         except Exception as exc:
             self._record_soft_failure('field_context', exc)
 
-        # ── Concept context injection ────────────────────────────────────────
         concept_ctx_jnp = jnp.zeros(cog.spatial_attn_out)
         if len(self.memory.episodic) >= 4:
             try:
-                _raw_ctx = self.memory.retrieve_context(np.array(S_full))
-                _raw_np  = np.array(_raw_ctx, dtype=np.float32)
-                _cdim    = min(len(_raw_np), self.W_concept_to_ctx.shape[1])
-                _pad     = max(0, self.W_concept_to_ctx.shape[1] - _cdim)
-                _vec     = np.pad(_raw_np[:_cdim], (0, _pad))
+                raw_ctx = self.memory.retrieve_context(np.array(S_full))
+                raw_np = np.array(raw_ctx, dtype=np.float32)
+                cdim = min(len(raw_np), self.W_concept_to_ctx.shape[1])
+                vec = np.pad(raw_np[:cdim], (0, max(0, self.W_concept_to_ctx.shape[1] - cdim)))
                 concept_ctx_jnp = jnp.tanh(
-                    self.W_concept_to_ctx @ jnp.array(_vec, dtype=jnp.float32))
+                    self.W_concept_to_ctx @ jnp.asarray(vec, dtype=jnp.float32))
             except Exception as exc:
                 self._record_soft_failure('memory_context', exc)
 
-        # ── Broker feedback injection → GRU ─────────────────────────────────
         broker_ctx_jnp = jnp.zeros(cog.spatial_attn_out)
         if self.prev_broker_context is not None:
             try:
-                _fb_np  = np.array(self.prev_broker_context, dtype=np.float32)
-                _fbdim  = min(len(_fb_np), self.W_broker_feedback.shape[1])
-                _fbpad  = max(0, self.W_broker_feedback.shape[1] - _fbdim)
-                _fbvec  = np.pad(_fb_np[:_fbdim], (0, _fbpad))
+                fb_np = np.array(self.prev_broker_context, dtype=np.float32)
+                fbdim = min(len(fb_np), self.W_broker_feedback.shape[1])
+                fbvec = np.pad(fb_np[:fbdim], (0, max(0, self.W_broker_feedback.shape[1] - fbdim)))
                 broker_ctx_jnp = jnp.tanh(
-                    self.W_broker_feedback @ jnp.array(_fbvec, dtype=jnp.float32))
+                    self.W_broker_feedback @ jnp.asarray(fbvec, dtype=jnp.float32))
             except Exception as exc:
                 self._record_soft_failure('broker_feedback', exc)
 
-        # Compose enriched field context: raw field + concept memory + broker feedback
         field_ctx = field_ctx + 0.30 * concept_ctx_jnp + 0.20 * broker_ctx_jnp
+        body_pos_approx = np.array(jax.device_get(S_full[:3]), dtype=np.float32)
+        neural_gain = self.field_supervenience.compute_neural_gain(
+            self.sigma_field, body_pos_approx, self._current_genome_fidelity)
 
-        # ── Field supervenience: field is a PRECONDITION for GRU computation ──
-        # Neural gain is computed from the sigma field BEFORE the GRU runs, so
-        # the field shapes what the GRU computes — not just how much it expresses.
-        # This is the constitutive relation: fix the field, fix the computation.
-        _body_pos_approx = np.array(obs_jnp[:3])
-        _neural_gain = self.field_supervenience.compute_neural_gain(
-            self.sigma_field, _body_pos_approx,
-            self._current_genome_fidelity)
-
-        # (a) Pre-gate x_wm: field topology shapes representational content
         x_wm_base = jnp.concatenate([S_full, t_enc, field_ctx])
-        x_wm = x_wm_base * float(_neural_gain)
-
+        x_wm = x_wm_base * float(neural_gain)
         h_f_prev, h_m_prev, h_s_prev = self.h_fast, self.h_medium, self.h_slow
         S_next, h_f2, h_m2, h_s2, kl, gate_ent = self.wm.step(
-            x_wm, h_f_prev, h_m_prev, h_s_prev,
-            self._step, key_wm)
+            x_wm, h_f_prev, h_m_prev, h_s_prev, self._step, key_wm)
         S_next = jnp.clip(S_next, -5.0, 5.0)
         sm_pred = sensorimotor_predict(
-            self.sensorimotor_params, S_full, jnp.array(action, dtype=jnp.float32))
+            self.sensorimotor_params, S_full, jnp.asarray(action, dtype=jnp.float32))
         S_next = jnp.clip(0.7 * S_next + 0.3 * sm_pred, -5.0, 5.0)
-        wm_mse = wm_pred_mse
 
-        # (b) Constitutive mixing: h = gain * h_gru + (1 − gain) * h_field
-        # h_field = 0 (vacuum attractor) — a dissipated field drives h toward
-        # zero, not toward a scaled version of what GRU computed independently.
-        # This means the hidden state cannot exist without the field substrate.
-        self.h_fast   = h_f2 * float(_neural_gain)
-        self.h_medium = h_m2 * float(_neural_gain)
-        self.h_slow   = h_s2 * float(_neural_gain)
-
-        # Thermodynamic supervenience: drop timescale layers below energy threshold.
-        # This is a hard structural truncation — the slow/medium temporal contexts
-        # literally do not update, not merely scale.  Their carry-forward state
-        # collapses to zero, erasing temporal integration at that timescale.
+        self.h_fast = h_f2 * float(neural_gain)
+        self.h_medium = h_m2 * float(neural_gain)
+        self.h_slow = h_s2 * float(neural_gain)
         if self._thermo_n_timescale_layers < 3:
-            self.h_slow   = jnp.zeros_like(self.h_slow)
+            self.h_slow = jnp.zeros_like(self.h_slow)
         if self._thermo_n_timescale_layers < 2:
             self.h_medium = jnp.zeros_like(self.h_medium)
 
-        # ── Thermodynamic cost: active GRU layers only ────────────────────────
-        self.cog_metabolism.charge(
-            self.cog_metabolism.gru_cost(
-                self.config.latent_dim, n_layers=self._thermo_n_timescale_layers))
+        self.cog_metabolism.charge(self.cog_metabolism.gru_cost(
+            self.config.latent_dim, n_layers=self._thermo_n_timescale_layers))
 
-        # Update deter state from world model output
         E_next, D_next, I_next = self.ss.decompose(S_next)
         self.deter_state = D_next[:cog.deter_dim]
-        self.stoch_state = jnp.pad(I_next, (0, max(0, cog.stoch_dim - I_next.shape[-1])))[:cog.stoch_dim]
+        self.stoch_state = jnp.pad(
+            I_next, (0, max(0, cog.stoch_dim - I_next.shape[-1])))[:cog.stoch_dim]
+
+        return {
+            'S_next': S_next,
+            'wm_mse': wm_pred_mse,
+            'kl': kl,
+            'gate_ent': gate_ent,
+            'x_wm': x_wm,
+            'h_f_prev': h_f_prev,
+            'h_m_prev': h_m_prev,
+            'h_s_prev': h_s_prev,
+        }
+
+    def _motor_stage(self, ws_final: jnp.ndarray, drives: jnp.ndarray,
+                     key_pol: jax.random.KeyArray, S_full: jnp.ndarray,
+                     obs_jnp: jnp.ndarray, viability_features: jnp.ndarray,
+                     organism_obs: dict, survival_pressure: float,
+                     dev_stage: int, world_summary: dict, peer_summary: dict,
+                     language_token: int, language_confidence: float,
+                     broker_mode: int) -> dict:
+        """Compose policy, reflex, memory, social, symbolic, and broker motor priors."""
+        cog = self.config.cognition
+        wdim = cog.workspace_dim
+        latent = jnp.pad(ws_final, (0, max(0, self.config.latent_dim - wdim)))[:self.config.latent_dim]
+        action_jnp, log_prob, entropy = GaussianPolicy.sample_and_log_prob(
+            latent, key_pol, self.policy.to_params())
+        self.cog_metabolism.charge(self.cog_metabolism.policy_cost())
+
+        reflex_action = self._viability_reflex(obs_jnp)
+        learned_action = jnp.tanh(self.viability_actor_W @ viability_features)
+        enactive_action = enactive_ac_mean(self.enactive_ac_params, viability_features)
+        planner_action = self.planner.plan(S_full, drives, world_summary)
+        social_action = self.social.action_prior(peer_summary, viability_features)
+        objective_weights = self.meta_hypernet.forward(drives, ws_final)
+        mem_k = self.metabolic_super.memory_retrieval_k(
+            self._current_body_energy, k_base=8)
+        memory_action = self.memory.retrieve_action_prior(np.array(S_full), k=mem_k)
+        self.cog_metabolism.charge(self.cog_metabolism.memory_retrieve_cost())
+
+        language_action = jnp.tanh(
+            self.language.action_bias(language_token, MAX_MOTORS))
+        energy_pressure = jnp.clip(1.0 - organism_obs['energy'], 0.0, 1.0)
+        policy_suppression = self.config.cognition.low_viability_policy_suppression * (
+            0.5 * survival_pressure + 0.5 * energy_pressure)
+        policy_weight = jnp.maximum(0.05, 0.35 - policy_suppression)
+        reflex_weight = 0.30 + 0.30 * jnp.maximum(survival_pressure, energy_pressure)
+        stage_scale = jnp.asarray([0.75, 0.9, 1.0, 1.1], dtype=jnp.float32)[dev_stage]
+        exploration_scale = jnp.asarray([0.55, 0.75, 0.95, 1.0], dtype=jnp.float32)[dev_stage]
+
+        action_mix = (
+            exploration_scale * (0.20 + objective_weights[0]) * policy_weight * action_jnp
+            + stage_scale * (0.20 + objective_weights[1]) * reflex_weight * reflex_action
+            + 0.15 * learned_action
+            + (0.10 + 0.35 * objective_weights[2]) * enactive_action
+            + (self.config.cognition.enactive_memory_gain
+               * (0.50 + objective_weights[3]) * memory_action)
+            + (0.08 + 0.35 * objective_weights[4]) * planner_action
+            + 0.08 * social_action
+            + 0.04 * language_confidence * language_action)
+
+        broker_motor_scale = {
+            ToolRequestBroker.MODE_ACT: 1.00,
+            ToolRequestBroker.MODE_IMAGINE: 0.00,
+            ToolRequestBroker.MODE_QUERY: 1.00,
+            ToolRequestBroker.MODE_DEFER: 0.10,
+        }.get(broker_mode, 1.0)
+        if broker_motor_scale < 1.0:
+            action_mix = (broker_motor_scale * action_mix
+                          + (1.0 - broker_motor_scale) * reflex_weight * reflex_action)
+
+        return {
+            'latent': latent,
+            'action_mix': action_mix,
+            'log_prob': log_prob,
+            'entropy': entropy,
+            'reflex_weight': reflex_weight,
+            'reflex_action': reflex_action,
+            'enactive_action': enactive_action,
+            'planner_action': planner_action,
+            'social_action': social_action,
+            'memory_action': memory_action,
+            'objective_weights': objective_weights,
+        }
+
+    def step(self, S0: np.ndarray, action: np.ndarray,
+             reward: float = 0.0, rng: Optional[jax.random.KeyArray] = None,
+             external_field: Optional[SigmaFieldGeometric] = None,
+             pump_field: bool = True) -> Tuple[np.ndarray, dict]:
+        if rng is None:
+            rng = jax.random.PRNGKey(self._step)
+        rng, key_wm, key_pol, key_info = random.split(rng, 4)
+        cog = self.config.cognition
+        if external_field is not None:
+            self.sigma_field = external_field
+            self.metastability_field.field = external_field
+
+
+        sensory = self._sensory_stage(S0, reward)
+        obs_jnp = sensory['obs_jnp']
+        viability = sensory['viability']
+        organism_obs = sensory['organism_obs']
+        viability_features = sensory['viability_features']
+        _info_quality = sensory['info_quality']
+        S_full = sensory['S_full']
+        peer_summary = sensory['peer_summary']
+        world_summary = sensory['world_summary']
+        consequence_risk = sensory['consequence_risk']
+
+        attention = self._attention_stage(obs_jnp, key_wm, pump_field)
+        slots_2d = attention['slots_2d']
+        slots_np = attention['slots_np']
+        mask_np = attention['mask_np']
+        slot_positions = attention['slot_positions']
+        interv_idx = attention['interv_idx']
+        cb = attention['cb']
+        _n_active_slots = attention['n_active_slots']
+
+        world_model = self._world_model_stage(
+            S_full, action, slot_positions, key_wm, sensory['wm_pred_mse'])
+        S_next = world_model['S_next']
+        wm_mse = world_model['wm_mse']
+        kl = world_model['kl']
+        gate_ent = world_model['gate_ent']
+        x_wm = world_model['x_wm']
+        h_f_prev = world_model['h_f_prev']
+        h_m_prev = world_model['h_m_prev']
+        h_s_prev = world_model['h_s_prev']
 
         # ── 7. Anderson DEQ — joint equilibrium over [deter ‖ ws_partial] ───
         gain      = self.metastability_field.contraction_gain
@@ -4241,61 +4355,19 @@ class TopogenesisAgent:
             _broker_context_next = np.array(ws_final, dtype=np.float32)
         # ACT: no injection needed; prev_broker_context cleared
 
-        # ── 13. Policy: sample action from latent ─────────────────────────
-        wdim = cog.workspace_dim
-        latent = jnp.pad(ws_final, (0, max(0, self.config.latent_dim - wdim))
-                         )[:self.config.latent_dim]
-        action_jnp, log_prob, entropy = GaussianPolicy.sample_and_log_prob(
-            latent, key_pol, self.policy.to_params())
-        # ── Thermodynamic cost: policy forward pass ──────────────────────────
-        self.cog_metabolism.charge(self.cog_metabolism.policy_cost())
-        reflex_action = self._viability_reflex(obs_jnp)
-        learned_action = jnp.tanh(self.viability_actor_W @ viability_features)
-        enactive_action = enactive_ac_mean(self.enactive_ac_params, viability_features)
-        planner_action = self.planner.plan(S_full, drives, world_summary)
-        social_action = self.social.action_prior(peer_summary, viability_features)
-        objective_weights = self.meta_hypernet.forward(drives, ws_final)
-        # ── Metabolic supervenience: narrow memory retrieval when starved ─────
-        _mem_k = self.metabolic_super.memory_retrieval_k(
-            self._current_body_energy, k_base=8)
-        memory_action = self.memory.retrieve_action_prior(np.array(S_full), k=_mem_k)
-        self.cog_metabolism.charge(self.cog_metabolism.memory_retrieve_cost())
-        energy_pressure = jnp.clip(1.0 - organism_obs['energy'], 0.0, 1.0)
-        policy_suppression = self.config.cognition.low_viability_policy_suppression * (
-            0.5 * survival_pressure + 0.5 * energy_pressure)
-        policy_weight = jnp.maximum(0.05, 0.35 - policy_suppression)
-        reflex_weight = 0.30 + 0.30 * jnp.maximum(survival_pressure, energy_pressure)
-        stage_scale = jnp.array([0.75, 0.9, 1.0, 1.1], dtype=jnp.float32)[dev_stage]
-        exploration_scale = jnp.array([0.55, 0.75, 0.95, 1.0], dtype=jnp.float32)[dev_stage]
-        policy_component = exploration_scale * (0.20 + objective_weights[0]) * policy_weight * action_jnp
-        reflex_component = stage_scale * (0.20 + objective_weights[1]) * reflex_weight * reflex_action
-        enactive_component = (0.10 + 0.35 * objective_weights[2]) * enactive_action
-        memory_component = (self.config.cognition.enactive_memory_gain
-                            * (0.50 + objective_weights[3]) * memory_action)
-        planner_component = (0.08 + 0.35 * objective_weights[4]) * planner_action
-        action_mix = (
-            policy_component
-            + reflex_component
-            + 0.15 * learned_action
-            + enactive_component
-            + memory_component
-            + planner_component
-            + 0.08 * social_action
-            + 0.04 * language_confidence * language_action)
 
-        # ── Broker mode gates motor output ────────────────────────────────────
-        _broker_motor_scale = {
-            ToolRequestBroker.MODE_ACT:     1.00,
-            ToolRequestBroker.MODE_IMAGINE: 0.00,
-            ToolRequestBroker.MODE_QUERY:   1.00,
-            ToolRequestBroker.MODE_DEFER:   0.10,
-        }.get(broker_mode, 1.0)
-        if _broker_motor_scale < 1.0:
-            # Preserve homeostatic reflex even in suppressed modes
-            action_mix = (
-                _broker_motor_scale * action_mix
-                + (1.0 - _broker_motor_scale) * reflex_weight * reflex_action)
-
+        motor = self._motor_stage(
+            ws_final, drives, key_pol, S_full, obs_jnp, viability_features,
+            organism_obs, survival_pressure, dev_stage, world_summary,
+            peer_summary, language_token, language_confidence, broker_mode)
+        latent = motor['latent']
+        action_mix = motor['action_mix']
+        reflex_weight = motor['reflex_weight']
+        enactive_action = motor['enactive_action']
+        planner_action = motor['planner_action']
+        social_action = motor['social_action']
+        memory_action = motor['memory_action']
+        objective_weights = motor['objective_weights']
         action_out = np.array(jnp.clip(action_mix, -3.0, 3.0))[:MAX_MOTORS]
 
         # ── 14. Free energy computation ────────────────────────────────────

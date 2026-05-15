@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      extended_steps:
+        description: "Steps for the extended JIT-enabled smoke run"
+        required: false
+        default: "2000"
+  schedule:
+    - cron: "17 5 * * 1"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+      - name: Unit tests
+        env:
+          JAX_DISABLE_JIT: "0"
+        run: python -m unittest discover -s tests -p 'test_*.py'
+      - name: JIT smoke run
+        env:
+          JAX_DISABLE_JIT: "0"
+        run: python -m experiments.run --experiment smoke --override --steps 2 --agents 1 --world_size 16 --log_every 1
+
+  extended-jit-run:
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+      - name: Extended JIT-enabled survival run
+        env:
+          JAX_DISABLE_JIT: "0"
+          EXTENDED_STEPS: ${{ github.event.inputs.extended_steps || '2000' }}
+        run: python -m experiments.run --experiment smoke --override --steps "$EXTENDED_STEPS" --agents 1 --world_size 16 --log_every 500
