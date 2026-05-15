@@ -3,6 +3,11 @@
 Topogenesis is a standalone embodied artificial-life research platform for modular,
 measurable ecosystem simulation.
 
+Topogenesis is early-stage research software. The engine runs, but the cognitive,
+field, developmental, and evolutionary mechanisms should be treated as
+experimental hypotheses until validated by ablations, baselines, and long-run
+metrics.
+
 The engine entrypoint lives inside this project at `topogenesis/engine.py`. The
 surrounding package provides stable experiment presets, metrics contracts, and a
 target module layout so every subsystem can become separable, testable,
@@ -36,3 +41,15 @@ python -m experiments.run --experiment open_ended_ecology
 ```
 
 Use `--engine-path` only when intentionally testing an alternate engine module.
+
+## Public Research Status
+
+The current release prioritizes transparency over polish:
+
+- core mechanisms are heuristic and under active hardening
+- `topogenesis/engine.py` still contains the integrated reference engine
+- experiment presets are intentionally explicit and reproducible
+- ablations, dashboards, and baseline agents are planned next
+
+See [docs/KNOWN_LIMITS.md](docs/KNOWN_LIMITS.md) for the current hardening
+checklist.

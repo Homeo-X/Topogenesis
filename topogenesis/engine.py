@@ -244,6 +244,9 @@ class CognitiveConfig:
     offspring_mutation_sigma: float = 0.015
     reproduction_energy_cost: float = 0.35
     reproduction_inventory_cost: int = 3
+    death_structural_min:    float = 0.04
+    death_genome_fidelity_min: float = 0.02
+    juvenile_death_threshold_scale: float = 0.50
     juvenile_age:           int   = 100
     adolescent_age:         int   = 300
     adult_age:              int   = 600
@@ -649,11 +652,13 @@ def stable_step_field_pde(field, agent_positions_arr, energies_arr,
     """CFL-stable reaction-diffusion PDE for S² sigma field."""
     Wx, Wy, Wz, _ = field.shape
     dx      = 1.0
-    dt_safe = min(dt, max_cfl * dx**2 / (6.0 * D + 1e-8))
+    D_safe  = jnp.maximum(jnp.asarray(D, dtype=jnp.float32), 1e-8)
+    dt_safe = jnp.minimum(jnp.asarray(dt, dtype=jnp.float32),
+                          max_cfl * dx**2 / (6.0 * D_safe + 1e-8))
     lap  = (jnp.roll(field, 1, 0) + jnp.roll(field, -1, 0)
           + jnp.roll(field, 1, 1) + jnp.roll(field, -1, 1)
           + jnp.roll(field, 1, 2) + jnp.roll(field, -1, 2) - 6.0 * field)
-    dfield = D * lap - decay * field
+    dfield = D_safe * lap - decay * field
     nb = (jnp.roll(field, 1, 0) + jnp.roll(field, -1, 0)
         + jnp.roll(field, 1, 1) + jnp.roll(field, -1, 1)
         + jnp.roll(field, 1, 2) + jnp.roll(field, -1, 2)) / 6.0
@@ -674,6 +679,7 @@ def stable_step_field_pde(field, agent_positions_arr, energies_arr,
     vacuum  = jnp.array([0., 0., 1.])
     new_phi = field + (dfield + pump) * dt_safe
     new_phi = jnp.clip(new_phi, -2.0, 2.0)
+    new_phi = jnp.nan_to_num(new_phi, nan=0.0, posinf=2.0, neginf=-2.0)
     # Dirichlet vacuum boundary
     for ax in range(3):
         new_phi = new_phi.at[tuple(
@@ -681,7 +687,8 @@ def stable_step_field_pde(field, agent_positions_arr, energies_arr,
         new_phi = new_phi.at[tuple(
             [slice(None)] * ax + [-1] + [slice(None)] * (3 - ax))].set(vacuum)
     norms = jnp.linalg.norm(new_phi, axis=-1, keepdims=True)
-    return new_phi / jnp.maximum(norms, 0.1)
+    projected = new_phi / jnp.maximum(norms, 0.1)
+    return jnp.nan_to_num(projected, nan=0.0, posinf=1.0, neginf=-1.0)
 
 @jit
 def compute_q_all_z(field: jnp.ndarray) -> jnp.ndarray:
@@ -705,6 +712,11 @@ class SigmaFieldGeometric:
         self.phi     = jnp.array(phi)
         self._q_all_z = jnp.zeros(shape[2])
         self.reservoir = ThermodynamicReservoir()
+        self.last_stability = {
+            'field_finite': 1.0,
+            'field_max_abs': 1.0,
+            'field_dissipation': 0.0,
+        }
 
     # ── Geometric primitives ────────────────────────────────────────────────
 
@@ -736,6 +748,11 @@ class SigmaFieldGeometric:
         dphi_z = (jnp.roll(self.phi, -1, 2) - jnp.roll(self.phi, 1, 2)) * 0.5
         grad_sq    = jnp.sum(dphi_x**2 + dphi_y**2 + dphi_z**2)
         dissipation = float(D * jnp.mean(grad_sq))
+        self.last_stability = {
+            'field_finite': float(jnp.all(jnp.isfinite(self.phi))),
+            'field_max_abs': float(jnp.max(jnp.abs(self.phi))),
+            'field_dissipation': dissipation,
+        }
         self.reservoir.exchange(dissipation, dt)
         return dissipation
 
@@ -3574,6 +3591,7 @@ class TopogenesisAgent:
         self.competence_ema    = 0.0
         self.last_S            = jnp.zeros(S_total)
         self.last_metrics:     dict = {}
+        self.soft_failures     = collections.Counter()
         self.viability_actor_W = jnp.zeros((MAX_MOTORS, 16))
         self.prev_viability    = None
         self.prev_viability_features = None
@@ -3664,6 +3682,11 @@ class TopogenesisAgent:
         features = jnp.einsum('fsd,d->fs', self.W_obs_to_feat, obs_jnp)
         features = jnp.tanh(features)        # (n_slots, slot_dim)
         return features[None]                # (1, n_slots, slot_dim)
+
+    def _record_soft_failure(self, subsystem: str, exc: Exception) -> None:
+        """Track recoverable subsystem failures instead of hiding them."""
+        self.soft_failures[subsystem] += 1
+        self.soft_failures[f'{subsystem}:{type(exc).__name__}'] += 1
 
     def _viability_from_obs(self, obs_jnp: jnp.ndarray) -> Tuple[float, dict]:
         attn_start = BODY_VEC_LEN + 4
@@ -3963,8 +3986,8 @@ class TopogenesisAgent:
         try:
             field_patch = self.sigma_field.sample_patch(slot_positions[0], patch_size=4)
             field_ctx   = field_patch[:cog.spatial_attn_out]
-        except Exception:
-            pass
+        except Exception as exc:
+            self._record_soft_failure('field_context', exc)
 
         # ── Concept context injection ────────────────────────────────────────
         concept_ctx_jnp = jnp.zeros(cog.spatial_attn_out)
@@ -3977,8 +4000,8 @@ class TopogenesisAgent:
                 _vec     = np.pad(_raw_np[:_cdim], (0, _pad))
                 concept_ctx_jnp = jnp.tanh(
                     self.W_concept_to_ctx @ jnp.array(_vec, dtype=jnp.float32))
-            except Exception:
-                pass
+            except Exception as exc:
+                self._record_soft_failure('memory_context', exc)
 
         # ── Broker feedback injection → GRU ─────────────────────────────────
         broker_ctx_jnp = jnp.zeros(cog.spatial_attn_out)
@@ -3990,8 +4013,8 @@ class TopogenesisAgent:
                 _fbvec  = np.pad(_fb_np[:_fbdim], (0, _fbpad))
                 broker_ctx_jnp = jnp.tanh(
                     self.W_broker_feedback @ jnp.array(_fbvec, dtype=jnp.float32))
-            except Exception:
-                pass
+            except Exception as exc:
+                self._record_soft_failure('broker_feedback', exc)
 
         # Compose enriched field context: raw field + concept memory + broker feedback
         field_ctx = field_ctx + 0.30 * concept_ctx_jnp + 0.20 * broker_ctx_jnp
@@ -4071,7 +4094,8 @@ class TopogenesisAgent:
                 cog.anderson_damping)
             z_star    = z_joint[:_deter_dim]
             ws_z_star = z_joint[_deter_dim:]
-        except Exception:
+        except Exception as exc:
+            self._record_soft_failure('anderson_deq', exc)
             z_star    = self.deter_state[:_deter_dim]
             ws_z_star = _ws_ctx
 
@@ -4095,8 +4119,8 @@ class TopogenesisAgent:
             _snorm = np.linalg.norm(self.symbolic_sys.structure)
             if _snorm > 1e-8:
                 self.symbolic_sys.structure /= _snorm
-        except Exception:
-            pass
+        except Exception as exc:
+            self._record_soft_failure('symbolic_projection', exc)
 
         # ── 8. Metastability field update ──────────────────────────────────
         workspace_activation = jnp.concatenate([
@@ -4201,14 +4225,16 @@ class TopogenesisAgent:
                 _S_imagined = self.broker.imagine(
                     S_full, self.wm.to_params(), self.config, rng)
                 _broker_context_next = np.array(_S_imagined, dtype=np.float32)
-            except Exception:
+            except Exception as exc:
+                self._record_soft_failure('broker_imagine', exc)
                 _broker_context_next = np.array(S_full, dtype=np.float32)
         elif broker_mode == ToolRequestBroker.MODE_QUERY:
             # Concept retrieval already done above; store raw context for injection
             try:
                 _broker_context_next = np.array(
                     self.memory.retrieve_context(np.array(S_full)), dtype=np.float32)
-            except Exception:
+            except Exception as exc:
+                self._record_soft_failure('broker_query', exc)
                 _broker_context_next = None
         elif broker_mode == ToolRequestBroker.MODE_DEFER:
             # Feed current ws_final back as next-step context (stronger recurrence)
@@ -4365,6 +4391,8 @@ class TopogenesisAgent:
             'field_action':  meta_stats['action'],
             'contraction_gain': meta_stats['contraction_gain'],
             'topo_charge':   self.sigma_field.total_charge(),
+            **getattr(self.sigma_field, 'last_stability', {}),
+            'soft_failure_count': int(sum(self.soft_failures.values())),
             # Symbolic
             'hrr_n_bound':   sym_bus.n_bound,
             'hrr_quality':   sym_bus.retrieval_q,
@@ -4566,11 +4594,19 @@ class TopogenesisAgent:
         mean_si  = float(np.mean(list(body.structural_integrity.values())))
         gf_fid   = body.genome_field_fidelity
         # Genome fidelity < 2%: hereditary information lost — cannot reproduce
-        organism_dead = physics_dead or mean_si < 0.04 or gf_fid < 0.02
+        thresh_scale = (
+            cog.juvenile_death_threshold_scale
+            if body.age < cog.juvenile_age else 1.0)
+        structural_min = cog.death_structural_min * thresh_scale
+        genome_min = cog.death_genome_fidelity_min * thresh_scale
+        organism_dead = (
+            physics_dead or mean_si < structural_min or gf_fid < genome_min)
 
         metrics['structural_integrity_mean'] = round(mean_si, 4)
         metrics['genome_field_fidelity']     = round(gf_fid, 4)
         metrics['biosynthetic_budget']       = round(float(body.biosynthetic_budget), 4)
+        metrics['death_structural_min']      = round(structural_min, 4)
+        metrics['death_genome_fidelity_min'] = round(genome_min, 4)
 
         return not organism_dead, action_out, metrics
 
