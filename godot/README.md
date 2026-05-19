@@ -17,6 +17,8 @@ Open the `godot/` folder in Godot 4.6.2, or run:
 - `Shift`: sprint; when held near an NPC it creates threat pressure
 - `E`: interact with nearby NPC
 - `F1`: toggle debug HUD
+- `F5`: save vertical-slice state
+- `F9`: load vertical-slice state
 - `Esc`: pause
 
 ## Current Prototype
@@ -25,6 +27,7 @@ Open the `godot/` folder in Godot 4.6.2, or run:
 - small 3D village scene with huts, path, trees, hazard/resource pressure zones
 - three NPCs
 - action-mapped input and pause/debug controls
+- objective state and JSON save/load
 - NPC affect/need/future-action state
 - overhead NPC state markers
 - interaction prompt and dialogue/debug HUD

@@ -1,6 +1,7 @@
 extends CanvasLayer
 
 var info_label: Label
+var objective_label: Label
 var dialogue_label: Label
 var prompt_label: Label
 var debug_visible := true
@@ -8,8 +9,14 @@ var dialogue_timer := 0.0
 
 
 func _ready() -> void:
+	objective_label = Label.new()
+	objective_label.position = Vector2(16, 12)
+	objective_label.size = Vector2(1000, 64)
+	objective_label.add_theme_font_size_override("font_size", 18)
+	add_child(objective_label)
+
 	info_label = Label.new()
-	info_label.position = Vector2(16, 16)
+	info_label.position = Vector2(16, 78)
 	info_label.size = Vector2(760, 260)
 	info_label.add_theme_font_size_override("font_size", 16)
 	add_child(info_label)
@@ -18,7 +25,7 @@ func _ready() -> void:
 	dialogue_label.position = Vector2(16, 604)
 	dialogue_label.size = Vector2(1100, 80)
 	dialogue_label.add_theme_font_size_override("font_size", 20)
-	dialogue_label.text = "WASD move | Shift sprint/threat | E interact | F1 debug | Esc pause"
+	dialogue_label.text = "WASD move | Shift sprint/threat | E interact | F1 debug | F5 save | F9 load | Esc pause"
 	add_child(dialogue_label)
 
 	prompt_label = Label.new()
@@ -34,8 +41,9 @@ func _process(delta: float) -> void:
 		debug_visible = not debug_visible
 		info_label.visible = debug_visible
 	if dialogue_timer <= 0.0 and not dialogue_label.text.begins_with("WASD"):
-		dialogue_label.text = "WASD move | Shift sprint/threat | E interact | F1 debug | Esc pause"
+		dialogue_label.text = "WASD move | Shift sprint/threat | E interact | F1 debug | F5 save | F9 load | Esc pause"
 
+	objective_label.text = "%s\n%s" % [GameDirector.objective_text(), GameDirector.status_text()]
 	var lines: Array[String] = ["Topogenesis RPG Vertical Slice"]
 	for npc in get_tree().get_nodes_in_group("npc"):
 		if npc.has_method("debug_summary"):

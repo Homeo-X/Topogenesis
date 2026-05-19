@@ -73,6 +73,10 @@ func debug_summary() -> String:
 	]
 
 
+func current_state() -> Dictionary:
+	return state.duplicate(true)
+
+
 func _desired_position(player: Node3D, distance_to_player: float) -> Vector3:
 	var need := str(state.get("dominant_need", "epistemic"))
 	if need == "safety" and player != null and distance_to_player < 5.0:

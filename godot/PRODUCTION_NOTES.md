@@ -8,6 +8,7 @@ This folder is a production-shaped vertical slice, not a finished AAA RPG.
 - Runtime input action setup instead of raw key polling.
 - Third-person player controller with sprint.
 - Pause, debug toggle, interaction prompt, and dialogue HUD.
+- Objective state, JSON save/load, and bridge snapshots.
 - Small readable 3D village layout with huts, path, trees, and pressure zones.
 - NPC overhead state markers for dominant need and pressure.
 - NPC movement and dialogue are driven by the `TopogenesisBridge` pressure model.

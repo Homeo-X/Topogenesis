@@ -103,6 +103,26 @@ func interaction_line(npc_id: String) -> String:
 	return "%s: Something feels unstable. I need to handle %s." % [name, need]
 
 
+func export_snapshot() -> Dictionary:
+	var snapshot := {}
+	for npc_id in npc_states:
+		var source: Dictionary = npc_states[npc_id]
+		snapshot[npc_id] = source.duplicate(true)
+	return snapshot
+
+
+func import_snapshot(snapshot: Dictionary) -> void:
+	npc_states.clear()
+	for npc_id in snapshot:
+		var source: Dictionary = snapshot[npc_id]
+		register_npc(str(npc_id), str(source.get("display_name", npc_id)))
+		for key in source:
+			npc_states[str(npc_id)][key] = source[key]
+		var memory: Array = npc_states[str(npc_id)].get("memory_events", [])
+		while memory.size() > MAX_MEMORY_EVENTS:
+			memory.pop_front()
+
+
 func _dominant_need(values: Dictionary) -> String:
 	var best_key := "unknown"
 	var best_value := -INF

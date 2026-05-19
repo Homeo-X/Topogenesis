@@ -20,6 +20,10 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if Input.is_action_just_pressed("pause"):
 		_toggle_pause()
+	if Input.is_action_just_pressed("save_game"):
+		_show_system_result(GameDirector.save_game(), "Saved.", "Save failed.")
+	if Input.is_action_just_pressed("load_game"):
+		_show_system_result(GameDirector.load_game(), "Loaded.", "Load failed.")
 	if is_paused:
 		return
 	nearest_npc = _find_nearest_npc()
@@ -30,8 +34,15 @@ func _process(_delta: float) -> void:
 	var interact_down := Input.is_action_pressed("interact")
 	if nearest_npc != null and interact_down and not interact_was_down:
 		if nearest_npc.has_method("interact"):
-			hud.show_dialogue(nearest_npc.interact())
+			var line: String = nearest_npc.interact()
+			if nearest_npc.has_method("current_state"):
+				GameDirector.record_interaction(nearest_npc.name, nearest_npc.current_state())
+			hud.show_dialogue(line)
 	interact_was_down = interact_down
+
+
+func _show_system_result(ok: bool, success: String, failure: String) -> void:
+	hud.show_dialogue(success if ok else "%s %s" % [failure, GameDirector.status_text()])
 
 
 func _configure_input_actions() -> void:
@@ -43,6 +54,8 @@ func _configure_input_actions() -> void:
 	_ensure_key_action("sprint", KEY_SHIFT)
 	_ensure_key_action("pause", KEY_ESCAPE)
 	_ensure_key_action("toggle_debug", KEY_F1)
+	_ensure_key_action("save_game", KEY_F5)
+	_ensure_key_action("load_game", KEY_F9)
 
 
 func _ensure_key_action(action_name: StringName, keycode: Key) -> void:
