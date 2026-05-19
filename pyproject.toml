@@ -12,6 +12,7 @@ dependencies = [
 
 [project.scripts]
 topogenesis = "experiments.run:main"
+topogenesis-bridge = "topogenesis.game_bridge.server:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

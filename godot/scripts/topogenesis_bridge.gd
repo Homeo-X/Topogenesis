@@ -1,8 +1,22 @@
 extends Node
 
 const MAX_MEMORY_EVENTS := 128
+const BACKEND_URL := "http://127.0.0.1:8765/step"
 
 var npc_states: Dictionary = {}
+var npc_pressures: Dictionary = {}
+var backend_online := false
+var backend_pending := false
+var backend_tick := 0
+var http_request: HTTPRequest
+var poll_timer := 0.0
+
+
+func _ready() -> void:
+	http_request = HTTPRequest.new()
+	http_request.timeout = 0.35
+	http_request.request_completed.connect(_on_backend_response)
+	add_child(http_request)
 
 
 func register_npc(npc_id: String, display_name: String) -> void:
@@ -34,6 +48,12 @@ func step_npc(npc_id: String, delta: float, world_pressure: Dictionary) -> Dicti
 	var resource: float = clampf(float(world_pressure.get("resource", 0.0)), 0.0, 1.0)
 	var player_help: float = clampf(float(world_pressure.get("player_help", 0.0)), 0.0, 1.0)
 	var player_threat: float = clampf(float(world_pressure.get("player_threat", 0.0)), 0.0, 1.0)
+	npc_pressures[npc_id] = {
+		"hazard": hazard,
+		"resource": resource,
+		"player_help": player_help,
+		"player_threat": player_threat,
+	}
 
 	state.energy = clampf(state.energy - 0.006 * delta + 0.018 * resource * delta, 0.0, 1.0)
 	state.environmental_safety = clampf(1.0 - hazard, 0.0, 1.0)
@@ -74,6 +94,7 @@ func step_npc(npc_id: String, delta: float, world_pressure: Dictionary) -> Dicti
 		1.0
 	)
 	state.future_action = _choose_future_action(metabolic, epistemic, safety, state.trust_player)
+	_poll_backend(delta)
 	return state
 
 
@@ -121,6 +142,50 @@ func import_snapshot(snapshot: Dictionary) -> void:
 		var memory: Array = npc_states[str(npc_id)].get("memory_events", [])
 		while memory.size() > MAX_MEMORY_EVENTS:
 			memory.pop_front()
+
+
+func backend_status() -> String:
+	return "Python bridge: online tick %d" % backend_tick if backend_online else "Python bridge: local fallback"
+
+
+func _poll_backend(delta: float) -> void:
+	if http_request == null or backend_pending:
+		return
+	poll_timer -= delta
+	if poll_timer > 0.0:
+		return
+	poll_timer = 0.25
+	backend_pending = true
+	var payload := {
+		"delta": maxf(delta, 0.016),
+		"snapshot": {"npcs": export_snapshot()},
+		"pressures": npc_pressures,
+	}
+	var err := http_request.request(
+		BACKEND_URL,
+		["Content-Type: application/json"],
+		HTTPClient.METHOD_POST,
+		JSON.stringify(payload)
+	)
+	if err != OK:
+		backend_pending = false
+		backend_online = false
+
+
+func _on_backend_response(_result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	backend_pending = false
+	if response_code != 200:
+		backend_online = false
+		return
+	var parsed = JSON.parse_string(body.get_string_from_utf8())
+	if typeof(parsed) != TYPE_DICTIONARY:
+		backend_online = false
+		return
+	var npcs = parsed.get("npcs", {})
+	if typeof(npcs) == TYPE_DICTIONARY:
+		import_snapshot(npcs)
+	backend_tick = int(parsed.get("tick", backend_tick))
+	backend_online = true
 
 
 func _dominant_need(values: Dictionary) -> String:

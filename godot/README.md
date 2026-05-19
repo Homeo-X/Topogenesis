@@ -11,6 +11,16 @@ Open the `godot/` folder in Godot 4.6.2, or run:
 & 'C:\Users\rsijr\Downloads\Godot_v4.6.2-stable_win64.exe\Godot_v4.6.2-stable_win64_console.exe' --path godot
 ```
 
+Optional Python cognition bridge:
+
+```powershell
+python -m topogenesis.game_bridge.server
+```
+
+When the bridge is running, Godot polls `http://127.0.0.1:8765/step` and imports
+NPC cognition snapshots. If it is not running, the local Godot fallback remains
+playable.
+
 ## Controls
 
 - `WASD`: move
@@ -28,6 +38,7 @@ Open the `godot/` folder in Godot 4.6.2, or run:
 - three NPCs
 - action-mapped input and pause/debug controls
 - objective state and JSON save/load
+- optional localhost Python cognition bridge
 - NPC affect/need/future-action state
 - overhead NPC state markers
 - interaction prompt and dialogue/debug HUD

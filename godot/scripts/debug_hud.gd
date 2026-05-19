@@ -43,7 +43,11 @@ func _process(delta: float) -> void:
 	if dialogue_timer <= 0.0 and not dialogue_label.text.begins_with("WASD"):
 		dialogue_label.text = "WASD move | Shift sprint/threat | E interact | F1 debug | F5 save | F9 load | Esc pause"
 
-	objective_label.text = "%s\n%s" % [GameDirector.objective_text(), GameDirector.status_text()]
+	objective_label.text = "%s\n%s\n%s" % [
+		GameDirector.objective_text(),
+		GameDirector.status_text(),
+		TopogenesisBridge.backend_status(),
+	]
 	var lines: Array[String] = ["Topogenesis RPG Vertical Slice"]
 	for npc in get_tree().get_nodes_in_group("npc"):
 		if npc.has_method("debug_summary"):
