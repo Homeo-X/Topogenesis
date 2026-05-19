@@ -86,4 +86,5 @@ The current release prioritizes transparency over polish:
 
 See [docs/KNOWN_LIMITS.md](docs/KNOWN_LIMITS.md) for the current hardening
 checklist and [docs/PRODUCTION_READINESS.md](docs/PRODUCTION_READINESS.md) for
-the production-readiness gates.
+the production-readiness gates. Stress coverage is tracked in
+[docs/STRESS_VALIDATION.md](docs/STRESS_VALIDATION.md).
