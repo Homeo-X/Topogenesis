@@ -1,4 +1,4 @@
-# Topogenesis RPG Prototype
+# Topogenesis RPG Vertical Slice
 
 This is a Godot 4.6 prototype for turning Topogenesis into a 3D RPG-style
 experience.
@@ -14,17 +14,20 @@ Open the `godot/` folder in Godot 4.6.2, or run:
 ## Controls
 
 - `WASD`: move
+- `Shift`: sprint; when held near an NPC it creates threat pressure
 - `E`: interact with nearby NPC
-- hold `Shift` near an NPC: create threat pressure for that NPC
+- `F1`: toggle debug HUD
+- `Esc`: pause
 
 ## Current Prototype
 
 - third-person player controller
-- small 3D village scene
+- small 3D village scene with huts, path, trees, hazard/resource pressure zones
 - three NPCs
-- resource and hazard pressure zones
+- action-mapped input and pause/debug controls
 - NPC affect/need/future-action state
-- dialogue/debug HUD
+- overhead NPC state markers
+- interaction prompt and dialogue/debug HUD
 - `TopogenesisBridge` autoload as the future connection point to the Python
   Topogenesis backend
 
@@ -32,3 +35,6 @@ The current bridge is a lightweight in-Godot simulation of the same design
 language as `topogenesis.npc`: viability pressure, affect stability, dominant
 need, trust, memory events, and future action. The next milestone is replacing
 or augmenting that local bridge with Python-backed Topogenesis state snapshots.
+
+See `PRODUCTION_NOTES.md` for what is production-shaped now and what remains
+before this could honestly be called AAA-quality.

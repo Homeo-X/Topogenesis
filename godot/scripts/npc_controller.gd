@@ -6,6 +6,8 @@ extends CharacterBody3D
 
 var wander_angle := 0.0
 var state: Dictionary = {}
+var overhead_label: Label3D
+var pressure_ring: MeshInstance3D
 
 
 func _ready() -> void:
@@ -26,8 +28,9 @@ func _physics_process(delta: float) -> void:
 		"hazard": hazard,
 		"resource": resource,
 		"player_help": 0.0,
-		"player_threat": 1.0 if distance_to_player < 1.8 and Input.is_key_pressed(KEY_SHIFT) else 0.0,
+		"player_threat": 1.0 if distance_to_player < 1.8 and Input.is_action_pressed("sprint") else 0.0,
 	})
+	_update_visual_state()
 
 	var target := _desired_position(player, distance_to_player)
 	var direction := global_position.direction_to(target)
@@ -53,6 +56,7 @@ func interact() -> String:
 		"player_help": 0.8,
 		"player_threat": 0.0,
 	})
+	_update_visual_state()
 	return TopogenesisBridge.interaction_line(npc_id)
 
 
@@ -111,3 +115,42 @@ func _build_body() -> void:
 	shape.shape = capsule_shape
 	shape.position.y = 0.78
 	add_child(shape)
+
+	pressure_ring = MeshInstance3D.new()
+	var ring := TorusMesh.new()
+	ring.inner_radius = 0.42
+	ring.outer_radius = 0.48
+	pressure_ring.mesh = ring
+	pressure_ring.position.y = 0.04
+	add_child(pressure_ring)
+
+	overhead_label = Label3D.new()
+	overhead_label.text = display_name
+	overhead_label.position.y = 2.05
+	overhead_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	overhead_label.modulate = Color(0.95, 0.92, 0.78)
+	add_child(overhead_label)
+
+
+func _update_visual_state() -> void:
+	if overhead_label == null or pressure_ring == null:
+		return
+	var need := str(state.get("dominant_need", "unknown"))
+	var affect := float(state.get("affect_stability", 0.5))
+	var threat := float(state.get("threat_salience", 0.0))
+	overhead_label.text = "%s\n%s %.2f" % [display_name, need, state.get("need_total", 0.0)]
+	var mat := StandardMaterial3D.new()
+	mat.emission_enabled = true
+	if need == "safety":
+		mat.albedo_color = Color(0.90, 0.20, 0.16)
+	elif need == "metabolic":
+		mat.albedo_color = Color(0.20, 0.82, 0.36)
+	elif need == "epistemic":
+		mat.albedo_color = Color(0.35, 0.58, 1.00)
+	else:
+		mat.albedo_color = Color(0.86, 0.72, 0.25)
+	mat.emission = mat.albedo_color
+	mat.emission_energy_multiplier = 0.3 + 0.7 * threat
+	mat.roughness = 0.7
+	pressure_ring.material_override = mat
+	pressure_ring.scale = Vector3.ONE * lerpf(0.85, 1.25, 1.0 - affect)

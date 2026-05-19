@@ -1,10 +1,12 @@
 extends CharacterBody3D
 
 @export var speed := 6.0
+@export var sprint_speed := 8.5
 @export var acceleration := 16.0
 @export var gravity := 18.0
 
 var look_target: Vector3 = Vector3.FORWARD
+var camera: Camera3D
 
 
 func _ready() -> void:
@@ -13,18 +15,11 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
-	var input_dir := Vector3.ZERO
-	if Input.is_key_pressed(KEY_W):
-		input_dir.z -= 1.0
-	if Input.is_key_pressed(KEY_S):
-		input_dir.z += 1.0
-	if Input.is_key_pressed(KEY_A):
-		input_dir.x -= 1.0
-	if Input.is_key_pressed(KEY_D):
-		input_dir.x += 1.0
-	input_dir = input_dir.normalized()
+	var input_2d := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+	var input_dir := Vector3(input_2d.x, 0.0, input_2d.y).normalized()
+	var active_speed := sprint_speed if Input.is_action_pressed("sprint") else speed
 
-	var target_velocity := input_dir * speed
+	var target_velocity := input_dir * active_speed
 	velocity.x = move_toward(velocity.x, target_velocity.x, acceleration * delta)
 	velocity.z = move_toward(velocity.z, target_velocity.z, acceleration * delta)
 	if not is_on_floor():
@@ -36,6 +31,14 @@ func _physics_process(delta: float) -> void:
 	if input_dir.length() > 0.01:
 		look_target = input_dir
 		rotation.y = atan2(-look_target.x, -look_target.z)
+	_update_camera(delta)
+
+
+func _update_camera(delta: float) -> void:
+	if camera == null:
+		return
+	var desired := Vector3(0.0, 5.8, 8.0)
+	camera.position = camera.position.lerp(desired, minf(1.0, 10.0 * delta))
 
 
 func _build_body() -> void:
@@ -60,7 +63,7 @@ func _build_body() -> void:
 	shape.position.y = 0.85
 	add_child(shape)
 
-	var camera := Camera3D.new()
+	camera = Camera3D.new()
 	camera.name = "Camera3D"
 	camera.position = Vector3(0.0, 5.8, 8.0)
 	camera.rotation_degrees = Vector3(-38.0, 0.0, 0.0)
