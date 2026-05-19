@@ -13,6 +13,12 @@ surrounding package provides stable experiment presets, metrics contracts, and a
 target module layout so every subsystem can become separable, testable,
 ablatable, and measurable.
 
+The `topogenesis.npc` package is the first RPG cognition layer. It models NPCs
+as self-maintaining predictive agents with continuous affect fields, emergent
+need pressure, compact models of other minds, communication intents, and small
+future simulations. Communication is represented as an attempted intervention on
+another agent's world model rather than a dialogue-tree response.
+
 ## North Star
 
 Topogenesis should become a self-maintaining artificial-life laboratory where agents
@@ -28,6 +34,20 @@ Stage 1 is a stable organism:
 - resources and hazards exert clear pressure
 - cognition has explicit action contributions and metabolic costs
 - checkpoints and run summaries are reproducible
+
+## RPG NPC Cognition
+
+The NPC layer is deliberately label-light:
+
+- affect is a continuous pressure field, not fixed emotion tags
+- needs emerge from viability deficits instead of scripted counters
+- social memory records reputation-shaping events
+- communication intents target belief changes in other agents
+- future simulation compares action consequences before acting or speaking
+
+These primitives are not yet wired into the full engine loop. They are tested as
+standalone modules first so the integrated reference engine does not become one
+huge script again.
 
 ## Run Presets
 
