@@ -2,9 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-
-def _clamp01(value: float) -> float:
-    return max(0.0, min(1.0, float(value)))
+from ._math import clamp01
 
 
 @dataclass(frozen=True)
@@ -21,7 +19,7 @@ class ViabilityState:
 
     def normalized(self) -> "ViabilityState":
         return ViabilityState(**{
-            key: _clamp01(value)
+            key: clamp01(value)
             for key, value in self.__dict__.items()
         })
 
@@ -37,6 +35,11 @@ class NeedPressure:
     social: float
     attachment: float
     safety: float
+
+    def __post_init__(self) -> None:
+        for field_name in self.__dataclass_fields__:
+            object.__setattr__(
+                self, field_name, clamp01(getattr(self, field_name)))
 
     @classmethod
     def from_viability(cls, viability: ViabilityState) -> "NeedPressure":
@@ -69,11 +72,11 @@ class NeedPressure:
         return max(self.__dict__, key=lambda key: getattr(self, key))
 
     def cognitive_modulators(self) -> dict[str, float]:
-        pressure = _clamp01(self.total)
+        pressure = clamp01(self.total)
         return {
             "planning_depth": max(1.0, 6.0 - 4.0 * pressure),
-            "memory_noise": _clamp01(0.05 + 0.55 * self.mnemonic + 0.25 * pressure),
-            "risk_tolerance": _clamp01(0.75 - 0.55 * max(self.safety, self.repair)),
-            "verification_bias": _clamp01(0.25 + 0.55 * self.epistemic),
-            "social_seeking": _clamp01(0.25 + 0.45 * self.social + 0.30 * self.attachment),
+            "memory_noise": clamp01(0.05 + 0.55 * self.mnemonic + 0.25 * pressure),
+            "risk_tolerance": clamp01(0.75 - 0.55 * max(self.safety, self.repair)),
+            "verification_bias": clamp01(0.25 + 0.55 * self.epistemic),
+            "social_seeking": clamp01(0.25 + 0.45 * self.social + 0.30 * self.attachment),
         }

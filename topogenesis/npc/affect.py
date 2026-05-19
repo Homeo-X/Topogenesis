@@ -2,9 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-
-def _clamp01(value: float) -> float:
-    return max(0.0, min(1.0, float(value)))
+from ._math import clamp, clamp01
 
 
 @dataclass
@@ -22,6 +20,10 @@ class AffectField:
     threat_salience: float = 0.10
     attachment_loss: float = 0.0
 
+    def __post_init__(self) -> None:
+        for field_name in self.__dataclass_fields__:
+            setattr(self, field_name, clamp01(getattr(self, field_name)))
+
     def update(
         self,
         *,
@@ -34,48 +36,49 @@ class AffectField:
         decay: float = 0.08,
     ) -> "AffectField":
         """Advance affect as dynamical constraints under pressure."""
-        prediction_error = _clamp01(prediction_error)
-        uncertainty = _clamp01(uncertainty)
-        threat = _clamp01(threat)
-        social_support = _clamp01(social_support)
-        control_feedback = max(-1.0, min(1.0, float(control_feedback)))
+        prediction_error = clamp01(prediction_error)
+        uncertainty = clamp01(uncertainty)
+        threat = clamp01(threat)
+        social_support = clamp01(social_support)
+        control_feedback = clamp(control_feedback, -1.0, 1.0)
+        decay = clamp(decay, 0.0, 1.0, default=0.08)
 
-        self.prediction_coherence = _clamp01(
+        self.prediction_coherence = clamp01(
             self.prediction_coherence * (1.0 - decay)
             + decay * (1.0 - 0.65 * prediction_error - 0.35 * uncertainty)
         )
-        self.threat_salience = _clamp01(
+        self.threat_salience = clamp01(
             self.threat_salience * (1.0 - decay)
             + decay * max(threat, uncertainty * 0.5)
         )
-        self.control = _clamp01(
+        self.control = clamp01(
             self.control * (1.0 - decay)
             + decay * (0.55 + 0.35 * control_feedback - 0.45 * uncertainty)
         )
-        self.social_belonging = _clamp01(
+        self.social_belonging = clamp01(
             self.social_belonging * (1.0 - decay)
             + decay * (0.45 + 0.55 * social_support)
         )
         if attachment_delta < 0.0:
-            self.attachment_loss = _clamp01(
+            self.attachment_loss = clamp01(
                 self.attachment_loss + min(1.0, abs(attachment_delta)))
         else:
-            self.attachment_loss = _clamp01(
+            self.attachment_loss = clamp01(
                 self.attachment_loss * (1.0 - decay) - 0.2 * attachment_delta)
-        self.attachment_security = _clamp01(
+        self.attachment_security = clamp01(
             self.attachment_security * (1.0 - decay)
             + decay * (self.social_belonging - self.attachment_loss)
         )
-        self.cognitive_load = _clamp01(
+        self.cognitive_load = clamp01(
             self.cognitive_load * (1.0 - decay)
             + decay * (0.4 * uncertainty + 0.4 * prediction_error + 0.2 * threat)
         )
-        self.novelty = _clamp01(
+        self.novelty = clamp01(
             self.novelty * (1.0 - decay) + decay * uncertainty)
-        self.safety = _clamp01(1.0 - 0.55 * self.threat_salience
-                               - 0.25 * uncertainty
-                               - 0.20 * self.attachment_loss)
-        self.stability = _clamp01(
+        self.safety = clamp01(1.0 - 0.55 * self.threat_salience
+                              - 0.25 * uncertainty
+                              - 0.20 * self.attachment_loss)
+        self.stability = clamp01(
             0.35 * self.safety
             + 0.25 * self.control
             + 0.25 * self.prediction_coherence
@@ -85,14 +88,23 @@ class AffectField:
 
     @property
     def risk_aversion(self) -> float:
-        return _clamp01(0.30 + 0.45 * self.threat_salience
-                        + 0.25 * (1.0 - self.control))
+        return clamp01(0.30 + 0.45 * self.threat_salience
+                       + 0.25 * (1.0 - self.control))
 
     @property
     def rumor_susceptibility(self) -> float:
-        return _clamp01(0.20 + 0.45 * (1.0 - self.prediction_coherence)
-                        + 0.25 * self.threat_salience
-                        + 0.10 * self.social_belonging)
+        return clamp01(0.20 + 0.45 * (1.0 - self.prediction_coherence)
+                       + 0.25 * self.threat_salience
+                       + 0.10 * self.social_belonging)
+
+    def copy(self) -> "AffectField":
+        return AffectField(**self.as_dict())
+
+    def as_dict(self) -> dict[str, float]:
+        return {
+            field_name: getattr(self, field_name)
+            for field_name in self.__dataclass_fields__
+        }
 
     def as_vector(self) -> tuple[float, ...]:
         return (

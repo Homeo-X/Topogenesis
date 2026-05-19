@@ -85,4 +85,5 @@ The current release prioritizes transparency over polish:
 - ablations, dashboards, and baseline agents are planned next
 
 See [docs/KNOWN_LIMITS.md](docs/KNOWN_LIMITS.md) for the current hardening
-checklist.
+checklist and [docs/PRODUCTION_READINESS.md](docs/PRODUCTION_READINESS.md) for
+the production-readiness gates.

@@ -1,4 +1,5 @@
 import unittest
+import math
 
 from topogenesis.npc import (
     AffectField,
@@ -101,6 +102,83 @@ class NpcCognitionTests(unittest.TestCase):
         investigate = simulate_future(action="investigate", needs=needs, affect=affect)
 
         self.assertGreater(seek_food.stability_delta, investigate.stability_delta)
+
+    def test_npc_inputs_are_sanitized_to_finite_ranges(self):
+        affect = AffectField(
+            stability=float("nan"),
+            safety=float("inf"),
+            control=-10.0,
+            prediction_coherence=2.5,
+        )
+        self.assertTrue(all(math.isfinite(value) for value in affect.as_vector()))
+        self.assertTrue(all(0.0 <= value <= 1.0 for value in affect.as_vector()))
+
+        pressure = NeedPressure(
+            metabolic=float("nan"),
+            repair=2.0,
+            mnemonic=-1.0,
+            epistemic=0.5,
+            social=0.5,
+            attachment=0.5,
+            safety=0.5,
+        )
+        self.assertEqual(pressure.metabolic, 0.0)
+        self.assertEqual(pressure.repair, 1.0)
+        self.assertEqual(pressure.mnemonic, 0.0)
+
+    def test_social_memory_is_bounded(self):
+        memory = SocialMemory(
+            events=[
+                {"agent_id": "player", "kind": "aid", "salience": 8.0, "valence": -9.0},
+                {"agent_id": "", "kind": "broken", "salience": 0.1, "valence": 0.1},
+            ],
+            max_events=3,
+        )
+        self.assertEqual(len(memory.events), 1)
+        self.assertEqual(memory.events[0]["salience"], 1.0)
+        self.assertEqual(memory.events[0]["valence"], -1.0)
+
+        for idx in range(10):
+            memory.remember(
+                agent_id="player",
+                kind="rumor",
+                salience=0.5,
+                valence=0.1,
+                claim=f"claim_{idx}",
+            )
+
+        self.assertEqual(len(memory.events), 3)
+        self.assertEqual(memory.events[0]["claim"], "claim_7")
+
+    def test_invalid_social_identifiers_fail_fast(self):
+        with self.assertRaises(ValueError):
+            CommunicationIntent(
+                target_agent=" ",
+                intended_effect="increase_trust",
+                belief_to_modify="claim",
+                confidence=0.5,
+            )
+        with self.assertRaises(ValueError):
+            OtherMindModel(agent_id="")
+
+    def test_future_outcome_clamps_invalid_scores(self):
+        outcome = simulate_future(
+            action="seek_food",
+            needs=NeedPressure(
+                metabolic=9.0,
+                repair=0.0,
+                mnemonic=0.0,
+                epistemic=0.0,
+                social=0.0,
+                attachment=0.0,
+                safety=float("inf"),
+            ),
+            affect=AffectField(cognitive_load=float("nan")),
+        )
+
+        self.assertTrue(-1.0 <= outcome.stability_delta <= 1.0)
+        self.assertTrue(0.0 <= outcome.expected_risk <= 1.0)
+        self.assertTrue(math.isfinite(outcome.value))
 
 
 if __name__ == "__main__":
