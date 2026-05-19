@@ -7,6 +7,9 @@ Its thesis is pressure-driven cognition: needs, affect, communication, and
 action are coupled to viability pressure rather than scripted labels or pure
 reward optimization. See [docs/PROJECT_THESIS.md](docs/PROJECT_THESIS.md).
 
+New readers should start with [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)
+for verification commands, suggested experiment presets, and contribution areas.
+
 Topogenesis is early-stage research software. The engine runs, but the cognitive,
 field, developmental, and evolutionary mechanisms should be treated as
 experimental hypotheses until validated by ablations, baselines, and long-run
@@ -89,7 +92,8 @@ The current release prioritizes transparency over polish:
 - experiment presets are intentionally explicit and reproducible
 - ablations, dashboards, and baseline agents are planned next
 
-See [docs/PROJECT_THESIS.md](docs/PROJECT_THESIS.md) for the research thesis,
+See [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) for first steps,
+[docs/PROJECT_THESIS.md](docs/PROJECT_THESIS.md) for the research thesis,
 [docs/KNOWN_LIMITS.md](docs/KNOWN_LIMITS.md) for the current hardening
 checklist, and [docs/PRODUCTION_READINESS.md](docs/PRODUCTION_READINESS.md) for
 the production-readiness gates. Stress coverage is tracked in
