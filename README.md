@@ -10,6 +10,10 @@ reward optimization. See [docs/PROJECT_THESIS.md](docs/PROJECT_THESIS.md).
 New readers should start with [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)
 for verification commands, suggested experiment presets, and contribution areas.
 
+A first Godot 4.6 3D RPG prototype lives in [godot/](godot/). It provides a
+small village, a third-person player, NPC pressure/affect state, interaction,
+and a bridge point for connecting the Python Topogenesis backend.
+
 Topogenesis is early-stage research software. The engine runs, but the cognitive,
 field, developmental, and evolutionary mechanisms should be treated as
 experimental hypotheses until validated by ablations, baselines, and long-run
