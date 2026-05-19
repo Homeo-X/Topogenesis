@@ -45,9 +45,10 @@ The NPC layer is deliberately label-light:
 - communication intents target belief changes in other agents
 - future simulation compares action consequences before acting or speaking
 
-These primitives are not yet wired into the full engine loop. They are tested as
-standalone modules first so the integrated reference engine does not become one
-huge script again.
+These primitives now feed the reference agent loop through a narrow bridge:
+engine viability metrics update NPC affect, need pressure, social memory,
+communication intent, and future simulation. The resulting instability profile
+is exposed in metrics and gently gates motor output toward reflex under risk.
 
 ## Run Presets
 

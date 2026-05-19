@@ -18,6 +18,17 @@ import numpy as np
 import optax
 from jax import jit, lax, random, vmap
 
+from topogenesis.npc import (
+    AffectField as NpcAffectField,
+    CommunicationIntent,
+    NeedPressure,
+    OtherMindModel,
+    SocialMemory,
+    ViabilityState,
+    interpret_intent,
+    simulate_future,
+)
+
 # ─────────────────────────────────────────────────────────────────────────────
 # CONSTANTS
 # ─────────────────────────────────────────────────────────────────────────────
@@ -3632,6 +3643,12 @@ class TopogenesisAgent:
         self.field_supervenience = FieldSupervenience()
         self.info_supervenience  = InformationalSupervenience()
         self.metabolic_super     = MetabolicSupervenience()
+        self.npc_affect          = NpcAffectField()
+        self.npc_social_memory   = SocialMemory(max_events=1024)
+        self.npc_minds           = {
+            'world': OtherMindModel(agent_id='world', trust=0.5, respect=0.5),
+        }
+        self.last_npc_state: dict = {}
         # ── Body state cache — populated by self_maintain() before step() ──
         # step() reads these to gate supervenience without needing body access.
         # Defaults are fully-viable so the first step before self_maintain()
@@ -4139,6 +4156,99 @@ class TopogenesisAgent:
             'objective_weights': objective_weights,
         }
 
+    def _update_npc_cognition(self, *, organism_obs: dict, viability: float,
+                              pred_err: float, wm_mse: float,
+                              identity_drift: float, consequence_risk: float,
+                              reward: float, peer_summary: dict) -> dict:
+        """Bridge engine viability metrics into RPG-style NPC cognition."""
+        health = float(organism_obs.get('health', 1.0))
+        membrane = float(organism_obs.get('membrane', 1.0))
+        body_integrity = float(np.clip(0.5 * health + 0.5 * membrane, 0.0, 1.0))
+        prediction_coherence = float(1.0 / (
+            1.0 + max(0.0, pred_err) + max(0.0, wm_mse)
+            + max(0.0, identity_drift)))
+        memory_integrity = float(1.0 / (
+            1.0 + max(0.0, self.sensorimotor_mse_ema)
+            + max(0.0, self.wm_online_mse_ema)))
+        peer_count = int(peer_summary.get('peer_count', 0))
+        peer_need = float(peer_summary.get('peer_need', 0.0))
+        social_stability = float(np.clip(
+            0.55 + 0.20 * min(1, peer_count) - 0.35 * peer_need, 0.0, 1.0))
+        attachment_integrity = float(np.clip(
+            0.50 + 0.35 * self.survival_ema + 0.15 * max(-1.0, min(1.0, reward)),
+            0.0, 1.0))
+        environmental_safety = float(np.clip(
+            1.0 - max(
+                float(organism_obs.get('hazard_prox', 0.0)),
+                float(consequence_risk)),
+            0.0, 1.0))
+
+        viability_state = ViabilityState(
+            energy=float(organism_obs.get('energy', self._current_body_energy)),
+            bodily_integrity=body_integrity,
+            memory_integrity=memory_integrity,
+            prediction_coherence=prediction_coherence,
+            social_stability=social_stability,
+            attachment_integrity=attachment_integrity,
+            environmental_safety=environmental_safety,
+        )
+        need_pressure = NeedPressure.from_viability(viability_state)
+        self.npc_affect.update(
+            prediction_error=1.0 - prediction_coherence,
+            uncertainty=max(need_pressure.epistemic, need_pressure.safety),
+            threat=need_pressure.safety,
+            attachment_delta=attachment_integrity - self.npc_affect.attachment_security,
+            social_support=social_stability,
+            control_feedback=viability - need_pressure.total,
+        )
+
+        mind = self.npc_minds.setdefault(
+            'world', OtherMindModel(agent_id='world', trust=0.5, respect=0.5))
+        intent = CommunicationIntent(
+            target_agent='world',
+            intended_effect='stabilize_prediction',
+            belief_to_modify='local_viability_state',
+            confidence=prediction_coherence,
+            emotional_weight=self.npc_affect.threat_salience,
+            social_risk=need_pressure.safety,
+            urgency=max(need_pressure.metabolic, need_pressure.repair),
+        )
+        interpretation = interpret_intent(intent, mind, self.npc_affect)
+        mind.update_belief(
+            intent.belief_to_modify,
+            interpretation.accepted_confidence,
+            source_trust=mind.trust)
+        self.npc_social_memory.remember(
+            agent_id='world',
+            kind='self_maintenance',
+            salience=max(need_pressure.total, interpretation.accepted_confidence),
+            valence=viability - need_pressure.total,
+            claim=need_pressure.dominant,
+        )
+        future_action = (
+            'seek_food' if need_pressure.metabolic >= need_pressure.epistemic
+            else 'verify')
+        future = simulate_future(
+            action=future_action,
+            needs=need_pressure,
+            affect=self.npc_affect,
+            listener=mind,
+            intent=intent,
+        )
+        modulators = need_pressure.cognitive_modulators()
+        state = {
+            'viability': viability_state,
+            'needs': need_pressure,
+            'affect': self.npc_affect,
+            'intent': intent,
+            'future': future,
+            'modulators': modulators,
+            'accepted_confidence': interpretation.accepted_confidence,
+            'suspicion_delta': interpretation.suspicion_delta,
+        }
+        self.last_npc_state = state
+        return state
+
     def step(self, S0: np.ndarray, action: np.ndarray,
              reward: float = 0.0, rng: Optional[jax.random.KeyArray] = None,
              external_field: Optional[SigmaFieldGeometric] = None,
@@ -4326,6 +4436,17 @@ class TopogenesisAgent:
                 drives, self.config)
             self.affect_state = new_aff
 
+        npc_state = self._update_npc_cognition(
+            organism_obs=organism_obs,
+            viability=viability,
+            pred_err=pred_err,
+            wm_mse=wm_mse,
+            identity_drift=identity_drift,
+            consequence_risk=consequence_risk,
+            reward=reward,
+            peer_summary=peer_summary,
+        )
+
         # ── 12.5 ToolRequestBroker — decide mode and build next-step context ─
         survival_pressure = float(jnp.clip(1.0 - viability, 0.0, 1.0))
         broker_mode = self.broker.decide(
@@ -4368,6 +4489,13 @@ class TopogenesisAgent:
         social_action = motor['social_action']
         memory_action = motor['memory_action']
         objective_weights = motor['objective_weights']
+        npc_motor_gate = float(np.clip(
+            0.35 + 0.65 * motor['objective_weights'][1]
+            * npc_state['modulators']['risk_tolerance'],
+            0.15, 1.0))
+        action_mix = (
+            npc_motor_gate * action_mix
+            + (1.0 - npc_motor_gate) * reflex_weight * motor['reflex_action'])
         action_out = np.array(jnp.clip(action_mix, -3.0, 3.0))[:MAX_MOTORS]
 
         # ── 14. Free energy computation ────────────────────────────────────
@@ -4480,6 +4608,17 @@ class TopogenesisAgent:
             # Affect
             'valence':       float(jnp.mean(self.affect_state)),
             'arousal':       float(jnp.linalg.norm(self.affect_state)),
+            'npc_affect_stability': self.npc_affect.stability,
+            'npc_affect_safety': self.npc_affect.safety,
+            'npc_threat_salience': self.npc_affect.threat_salience,
+            'npc_need_total': npc_state['needs'].total,
+            'npc_need_dominant': npc_state['needs'].dominant,
+            'npc_future_action': npc_state['future'].action,
+            'npc_future_value': npc_state['future'].value,
+            'npc_motor_gate': npc_motor_gate,
+            'npc_social_memory_events': len(self.npc_social_memory.events),
+            'npc_message_confidence': npc_state['accepted_confidence'],
+            'npc_message_suspicion': npc_state['suspicion_delta'],
             # Meta
             'viability':      viability,
             'survival_ema':   self.survival_ema,

@@ -11,6 +11,9 @@ manual terminal runs.
 - `tests/test_stress_validation.py::test_sigma_field_jit_stress_remains_finite_and_normalized`
   runs 256 sigma-field PDE steps with edge-clipped positions and high energies,
   then checks finite field values and near-unit normalization.
+- The engine smoke run now also exercises the NPC cognition bridge because the
+  reference agent loop updates NPC affect, need pressure, social memory,
+  communication intent, future simulation, and motor gating each step.
 
 ## Manual Validation Run
 
