@@ -7,8 +7,13 @@ var is_paused := false
 var sun_light: DirectionalLight3D
 var world_environment: WorldEnvironment
 var torch_lights: Array[OmniLight3D] = []
+var loaded_assets: Dictionary = {}
 var time_of_day := 0.68
 var day_speed := 0.018
+
+const MEDIEVAL_ASSET_ROOT := "res://assets/quaternius/medieval_village/glTF/"
+const PROP_ASSET_ROOT := "res://assets/quaternius/fantasy_props/Exports/glTF/"
+const NATURE_ASSET_ROOT := "res://assets/quaternius/stylized_nature/glTF/"
 
 
 func _ready() -> void:
@@ -174,6 +179,13 @@ func _add_path() -> void:
 
 
 func _add_tree(pos: Vector3) -> void:
+	if _add_asset(
+		NATURE_ASSET_ROOT + _variant(["CommonTree_1.gltf", "CommonTree_3.gltf", "Pine_2.gltf"], int(absf(pos.x + pos.z))),
+		pos,
+		Vector3.ONE * 1.0,
+		float(int(pos.x * 11.0 + pos.z * 7.0) % 360)
+	) != null:
+		return
 	var trunk := MeshInstance3D.new()
 	var trunk_mesh := CylinderMesh.new()
 	trunk_mesh.top_radius = 0.18
@@ -200,6 +212,9 @@ func _add_tree(pos: Vector3) -> void:
 
 
 func _add_hut(pos: Vector3, color: Color) -> void:
+	if _add_modular_hut(pos, color):
+		return
+
 	var hut := MeshInstance3D.new()
 	var box := BoxMesh.new()
 	box.size = Vector3(2.6, 1.8, 2.6)
@@ -232,7 +247,45 @@ func _add_hut(pos: Vector3, color: Color) -> void:
 	add_child(body)
 
 
+func _add_modular_hut(pos: Vector3, _color: Color) -> bool:
+	var parts := [
+		[MEDIEVAL_ASSET_ROOT + "Wall_Plaster_Door_Round.gltf", Vector3(0.0, 0.0, -1.6), 0.0],
+		[MEDIEVAL_ASSET_ROOT + "Wall_Plaster_Window_Wide_Flat.gltf", Vector3(-1.6, 0.0, 0.0), 90.0],
+		[MEDIEVAL_ASSET_ROOT + "Wall_Plaster_Window_Wide_Round.gltf", Vector3(1.6, 0.0, 0.0), -90.0],
+		[MEDIEVAL_ASSET_ROOT + "Wall_Plaster_Straight.gltf", Vector3(0.0, 0.0, 1.6), 180.0],
+		[MEDIEVAL_ASSET_ROOT + "Floor_WoodDark.gltf", Vector3(0.0, 0.0, 0.0), 0.0],
+		[MEDIEVAL_ASSET_ROOT + "Roof_RoundTiles_4x4.gltf", Vector3(0.0, 2.05, 0.0), 0.0],
+		[MEDIEVAL_ASSET_ROOT + "Door_1_Round.gltf", Vector3(0.0, 0.0, -1.68), 0.0],
+	]
+	var spawned_any := false
+	for part in parts:
+		var node := _add_asset(part[0], pos + part[1], Vector3.ONE, part[2])
+		spawned_any = spawned_any or node != null
+	if not spawned_any:
+		return false
+
+	for detail in [
+		[PROP_ASSET_ROOT + "Barrel.gltf", Vector3(-1.25, 0.0, -2.25), 0.75, 12.0],
+		[PROP_ASSET_ROOT + "Crate_Wooden.gltf", Vector3(1.35, 0.0, -2.15), 0.75, -18.0],
+		[PROP_ASSET_ROOT + "Lantern_Wall.gltf", Vector3(0.82, 1.35, -1.75), 0.75, 0.0],
+	]:
+		_add_asset(detail[0], pos + detail[1], Vector3.ONE * detail[2], detail[3])
+
+	var body := StaticBody3D.new()
+	var collision := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = Vector3(3.4, 2.2, 3.4)
+	collision.shape = shape
+	collision.position = pos + Vector3(0.0, 1.1, 0.0)
+	body.add_child(collision)
+	add_child(body)
+	return true
+
+
 func _add_well(pos: Vector3) -> void:
+	if _add_asset(PROP_ASSET_ROOT + "Bucket_Wooden_1.gltf", pos + Vector3(0.0, 0.05, 0.0), Vector3.ONE, 0.0) != null:
+		_add_asset(PROP_ASSET_ROOT + "Rope_1.gltf", pos + Vector3(0.0, 0.95, 0.0), Vector3.ONE * 0.75, 90.0)
+		return
 	var base := MeshInstance3D.new()
 	var base_mesh := CylinderMesh.new()
 	base_mesh.top_radius = 0.78
@@ -253,6 +306,11 @@ func _add_well(pos: Vector3) -> void:
 
 
 func _add_market_stall(pos: Vector3) -> void:
+	if _add_asset(PROP_ASSET_ROOT + "Stall_Empty.gltf", pos, Vector3.ONE, 0.0) != null:
+		_add_asset(PROP_ASSET_ROOT + "FarmCrate_Apple.gltf", pos + Vector3(-0.45, 0.0, -0.35), Vector3.ONE * 0.75, -10.0)
+		_add_asset(PROP_ASSET_ROOT + "FarmCrate_Carrot.gltf", pos + Vector3(0.48, 0.0, -0.30), Vector3.ONE * 0.75, 12.0)
+		_add_torch(pos + Vector3(-1.25, 0.0, -0.65))
+		return
 	var table := MeshInstance3D.new()
 	var table_mesh := BoxMesh.new()
 	table_mesh.size = Vector3(2.2, 0.18, 1.0)
@@ -273,6 +331,11 @@ func _add_market_stall(pos: Vector3) -> void:
 
 
 func _add_blacksmith(pos: Vector3) -> void:
+	if _add_asset(PROP_ASSET_ROOT + "Anvil_Log.gltf", pos, Vector3.ONE, -12.0) != null:
+		_add_asset(PROP_ASSET_ROOT + "Workbench.gltf", pos + Vector3(1.4, 0.0, 0.45), Vector3.ONE, 90.0)
+		_add_asset(PROP_ASSET_ROOT + "Axe_Bronze.gltf", pos + Vector3(-0.8, 0.0, 0.3), Vector3.ONE * 0.8, 35.0)
+		_add_torch(pos + Vector3(0.9, 0.0, -0.3))
+		return
 	var anvil := MeshInstance3D.new()
 	var anvil_mesh := BoxMesh.new()
 	anvil_mesh.size = Vector3(0.86, 0.42, 0.38)
@@ -301,6 +364,11 @@ func _add_chapel_marker(pos: Vector3) -> void:
 
 
 func _add_campfire(pos: Vector3) -> void:
+	if _add_asset(PROP_ASSET_ROOT + "Cauldron.gltf", pos + Vector3(0.0, 0.0, 0.0), Vector3.ONE * 0.85, 0.0) != null:
+		_add_asset(PROP_ASSET_ROOT + "Bench.gltf", pos + Vector3(1.4, 0.0, 0.55), Vector3.ONE * 0.8, -18.0)
+		_add_asset(PROP_ASSET_ROOT + "Bench.gltf", pos + Vector3(-1.3, 0.0, -0.5), Vector3.ONE * 0.8, 162.0)
+		_add_torch(pos)
+		return
 	for i in range(6):
 		var rock := MeshInstance3D.new()
 		var rock_mesh := SphereMesh.new()
@@ -338,6 +406,15 @@ func _add_fence(pos: Vector3, yaw: float) -> void:
 
 
 func _add_grass_patch(pos: Vector3) -> void:
+	var asset := NATURE_ASSET_ROOT + _variant([
+		"Grass_Common_Short.gltf",
+		"Grass_Wispy_Tall.gltf",
+		"Fern_1.gltf",
+		"Bush_Common.gltf",
+		"Plant_1.gltf",
+	], int(absf(pos.x * 19.0 + pos.z * 23.0)))
+	if _add_asset(asset, pos, Vector3.ONE * 0.85, float(int(pos.x * 17.0) % 180)) != null:
+		return
 	var grass := MeshInstance3D.new()
 	var mesh := CylinderMesh.new()
 	mesh.top_radius = 0.02
@@ -351,15 +428,19 @@ func _add_grass_patch(pos: Vector3) -> void:
 
 
 func _add_torch(pos: Vector3) -> void:
-	var post := MeshInstance3D.new()
-	var post_mesh := CylinderMesh.new()
-	post_mesh.top_radius = 0.045
-	post_mesh.bottom_radius = 0.06
-	post_mesh.height = 1.25
-	post.mesh = post_mesh
-	post.position = pos + Vector3(0.0, 0.65, 0.0)
-	post.material_override = _material(Color(0.20, 0.12, 0.06), 0.84)
-	add_child(post)
+	var imported := _add_asset(PROP_ASSET_ROOT + "CandleStick_Stand.gltf", pos, Vector3.ONE * 0.9, 0.0)
+	if imported != null:
+		imported.name = "TorchModel"
+	else:
+		var post := MeshInstance3D.new()
+		var post_mesh := CylinderMesh.new()
+		post_mesh.top_radius = 0.045
+		post_mesh.bottom_radius = 0.06
+		post_mesh.height = 1.25
+		post.mesh = post_mesh
+		post.position = pos + Vector3(0.0, 0.65, 0.0)
+		post.material_override = _material(Color(0.20, 0.12, 0.06), 0.84)
+		add_child(post)
 
 	var light := OmniLight3D.new()
 	light.position = pos + Vector3(0.0, 1.34, 0.0)
@@ -368,6 +449,31 @@ func _add_torch(pos: Vector3) -> void:
 	light.omni_range = 5.0
 	torch_lights.append(light)
 	add_child(light)
+
+
+func _add_asset(path: String, pos: Vector3, scale_factor: Vector3, yaw_degrees: float) -> Node3D:
+	if not FileAccess.file_exists(path):
+		return null
+	var packed = loaded_assets.get(path)
+	if packed == null:
+		packed = load(path)
+		if packed == null:
+			return null
+		loaded_assets[path] = packed
+	if not packed is PackedScene:
+		return null
+	var node := (packed as PackedScene).instantiate() as Node3D
+	if node == null:
+		return null
+	node.position = pos
+	node.scale = scale_factor
+	node.rotation_degrees.y = yaw_degrees
+	add_child(node)
+	return node
+
+
+func _variant(items: Array[String], seed: int) -> String:
+	return items[absi(seed) % items.size()]
 
 
 func _material(color: Color, roughness: float) -> StandardMaterial3D:

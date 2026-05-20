@@ -6,6 +6,8 @@ extends CharacterBody3D
 @export var walk_speed := 1.65
 @export var turn_speed := 8.0
 
+const CHARACTER_ASSET_ROOT := "res://assets/quaternius/animated_characters/Ultimate Animated Character Pack - Nov 2019/FBX/"
+
 var wander_angle := 0.0
 var retarget_timer := 0.0
 var current_target := Vector3.ZERO
@@ -132,50 +134,51 @@ func _build_body() -> void:
 	body_material = _make_material(palette["body"], 0.78)
 	cloak_material = _make_material(palette["cloak"], 0.88)
 
-	var torso := MeshInstance3D.new()
-	torso.name = "Torso"
-	var torso_mesh := CapsuleMesh.new()
-	torso_mesh.radius = 0.34
-	torso_mesh.height = 1.22
-	torso.mesh = torso_mesh
-	torso.position.y = 0.86
-	torso.scale = Vector3(0.95, 1.0, 0.72)
-	torso.material_override = body_material
-	add_child(torso)
+	if _add_character_model() == null:
+		var torso := MeshInstance3D.new()
+		torso.name = "Torso"
+		var torso_mesh := CapsuleMesh.new()
+		torso_mesh.radius = 0.34
+		torso_mesh.height = 1.22
+		torso.mesh = torso_mesh
+		torso.position.y = 0.86
+		torso.scale = Vector3(0.95, 1.0, 0.72)
+		torso.material_override = body_material
+		add_child(torso)
 
-	var cloak := MeshInstance3D.new()
-	cloak.name = "Cloak"
-	var cloak_mesh := BoxMesh.new()
-	cloak_mesh.size = Vector3(0.78, 1.05, 0.10)
-	cloak.mesh = cloak_mesh
-	cloak.position = Vector3(0.0, 0.92, 0.30)
-	cloak.material_override = cloak_material
-	add_child(cloak)
+		var cloak := MeshInstance3D.new()
+		cloak.name = "Cloak"
+		var cloak_mesh := BoxMesh.new()
+		cloak_mesh.size = Vector3(0.78, 1.05, 0.10)
+		cloak.mesh = cloak_mesh
+		cloak.position = Vector3(0.0, 0.92, 0.30)
+		cloak.material_override = cloak_material
+		add_child(cloak)
 
-	var head := MeshInstance3D.new()
-	head.name = "Head"
-	var head_mesh := SphereMesh.new()
-	head_mesh.radius = 0.27
-	head_mesh.height = 0.42
-	head.mesh = head_mesh
-	head.position.y = 1.66
-	head.material_override = _make_material(palette["skin"], 0.65)
-	add_child(head)
+		var head := MeshInstance3D.new()
+		head.name = "Head"
+		var head_mesh := SphereMesh.new()
+		head_mesh.radius = 0.27
+		head_mesh.height = 0.42
+		head.mesh = head_mesh
+		head.position.y = 1.66
+		head.material_override = _make_material(palette["skin"], 0.65)
+		add_child(head)
 
-	var hood := MeshInstance3D.new()
-	hood.name = "Hood"
-	var hood_mesh := TorusMesh.new()
-	hood_mesh.inner_radius = 0.24
-	hood_mesh.outer_radius = 0.31
-	hood.mesh = hood_mesh
-	hood.position = Vector3(0.0, 1.67, 0.02)
-	hood.rotation_degrees.x = 90.0
-	hood.material_override = cloak_material
-	add_child(hood)
+		var hood := MeshInstance3D.new()
+		hood.name = "Hood"
+		var hood_mesh := TorusMesh.new()
+		hood_mesh.inner_radius = 0.24
+		hood_mesh.outer_radius = 0.31
+		hood.mesh = hood_mesh
+		hood.position = Vector3(0.0, 1.67, 0.02)
+		hood.rotation_degrees.x = 90.0
+		hood.material_override = cloak_material
+		add_child(hood)
 
-	_add_eye(Vector3(-0.09, 1.68, -0.245))
-	_add_eye(Vector3(0.09, 1.68, -0.245))
-	_add_side_satchel(palette["accent"])
+		_add_eye(Vector3(-0.09, 1.68, -0.245))
+		_add_eye(Vector3(0.09, 1.68, -0.245))
+		_add_side_satchel(palette["accent"])
 
 	var shape := CollisionShape3D.new()
 	var capsule_shape := CapsuleShape3D.new()
@@ -199,6 +202,34 @@ func _build_body() -> void:
 	overhead_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	overhead_label.modulate = Color(0.95, 0.92, 0.78)
 	add_child(overhead_label)
+
+
+func _add_character_model() -> Node3D:
+	var variants := [
+		"Worker_Female.fbx",
+		"Worker_Male.fbx",
+		"Witch.fbx",
+		"Wizard.fbx",
+		"Doctor_Female_Old.fbx",
+		"Doctor_Male_Old.fbx",
+		"Viking_Female.fbx",
+		"Viking_Male.fbx",
+	]
+	var path: String = CHARACTER_ASSET_ROOT + variants[absi(hash(npc_id)) % variants.size()]
+	if not FileAccess.file_exists(path):
+		return null
+	var packed = load(path)
+	if packed == null or not packed is PackedScene:
+		return null
+	var model := (packed as PackedScene).instantiate() as Node3D
+	if model == null:
+		return null
+	model.name = "RiggedVillager"
+	model.position = Vector3(0.0, 0.0, 0.0)
+	model.scale = Vector3.ONE * 0.92
+	model.rotation_degrees.y = 180.0
+	add_child(model)
+	return model
 
 
 func _add_eye(pos: Vector3) -> void:

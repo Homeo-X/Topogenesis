@@ -40,11 +40,14 @@ playable.
 ## Current Prototype
 
 - third-person player controller
-- small 3D village scene with huts, path, trees, hazard/resource pressure zones
+- small 3D village scene with Quaternius CC0 modular village pieces,
+  props, trees, foliage, hazard/resource pressure zones
 - warmer medieval-fantasy village dressing: torches, well, market stall,
   campfire, chapel marker, blacksmith point, herb garden, fences, fog, and
   dynamic day/night lighting
 - three NPCs
+- CC0 rigged animated character variants are used when Godot can import the
+  FBX character pack; generated humanoid bodies remain as runtime fallback
 - action-mapped input and pause/debug controls
 - objective state and JSON save/load
 - optional localhost Python cognition bridge
@@ -61,3 +64,5 @@ or augmenting that local bridge with Python-backed Topogenesis state snapshots.
 
 See `PRODUCTION_NOTES.md` for what is production-shaped now and what remains
 before this could honestly be called AAA-quality.
+
+See `ASSET_CREDITS.md` for the included CC0 asset packs and license notes.
