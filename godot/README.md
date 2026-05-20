@@ -30,6 +30,8 @@ playable.
 ## Controls
 
 - Left mouse click: move to ground position
+- `WASD`: alternative camera-relative movement
+- Right mouse drag: rotate camera around player
 - Mouse wheel: zoom camera in/out
 - `Shift`: sprint; when held near an NPC it creates threat pressure
 - `E`: interact with nearby NPC
