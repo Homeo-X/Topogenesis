@@ -7,6 +7,9 @@ extends CharacterBody3D
 @export var turn_speed := 8.0
 
 const CHARACTER_ASSET_ROOT := "res://assets/quaternius/animated_characters/Ultimate Animated Character Pack - Nov 2019/FBX/"
+const WORLD_HALF_EXTENT := 50.0
+const RESOURCE_CENTER := Vector3(-28.0, 0.0, -22.0)
+const HAZARD_CENTER := Vector3(31.0, 0.0, -26.0)
 
 var wander_angle := 0.0
 var retarget_timer := 0.0
@@ -101,7 +104,7 @@ func _desired_position(player: Node3D, distance_to_player: float) -> Vector3:
 			away = Vector3.RIGHT
 		return _bounded_world(global_position + away.normalized() * 4.0)
 	if need == "metabolic":
-		return Vector3(-8.0, 0.0, -6.0)
+		return RESOURCE_CENTER
 	if need == "epistemic" and player != null and distance_to_player < 8.0:
 		var offset_seed := float(absi(hash(npc_id)) % 628) / 100.0
 		var offset := Vector3(cos(offset_seed), 0.0, sin(offset_seed)) * 2.2
@@ -116,17 +119,22 @@ func _desired_position(player: Node3D, distance_to_player: float) -> Vector3:
 
 
 func _bounded_world(pos: Vector3) -> Vector3:
-	return Vector3(clampf(pos.x, -18.0, 18.0), 0.2, clampf(pos.z, -18.0, 18.0))
+	return Vector3(
+		clampf(pos.x, -WORLD_HALF_EXTENT, WORLD_HALF_EXTENT),
+		0.2,
+		clampf(pos.z, -WORLD_HALF_EXTENT, WORLD_HALF_EXTENT)
+	)
 
 
 func _hazard_pressure() -> float:
-	var hazard_center := Vector3(7.0, 0.0, -7.0)
-	return clampf(1.0 - global_position.distance_to(hazard_center) / 14.0, 0.0, 1.0)
+	return clampf(1.0 - global_position.distance_to(HAZARD_CENTER) / 24.0, 0.0, 1.0)
 
 
 func _resource_pressure() -> float:
-	var resource_center := Vector3(-8.0, 0.0, -6.0)
-	return clampf(1.0 - global_position.distance_to(resource_center) / 10.0, 0.0, 1.0)
+	var farm_center := Vector3(22.0, 0.0, 23.0)
+	var grove_pressure := clampf(1.0 - global_position.distance_to(RESOURCE_CENTER) / 18.0, 0.0, 1.0)
+	var farm_pressure := clampf(1.0 - global_position.distance_to(farm_center) / 16.0, 0.0, 1.0)
+	return maxf(grove_pressure, farm_pressure)
 
 
 func _build_body() -> void:

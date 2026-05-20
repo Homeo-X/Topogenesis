@@ -15,6 +15,7 @@ extends CharacterBody3D
 @export var max_camera_pitch := 62.0
 
 const CHARACTER_ASSET_ROOT := "res://assets/quaternius/animated_characters/Ultimate Animated Character Pack - Nov 2019/FBX/"
+const WORLD_HALF_EXTENT := 50.0
 
 var look_target: Vector3 = Vector3.FORWARD
 var camera: Camera3D
@@ -169,9 +170,9 @@ func _set_move_target(screen_position: Vector2) -> void:
 	if distance_to_ground <= 0.0:
 		return
 	move_target = origin + ray * distance_to_ground
-	move_target.x = clampf(move_target.x, -19.5, 19.5)
+	move_target.x = clampf(move_target.x, -WORLD_HALF_EXTENT, WORLD_HALF_EXTENT)
 	move_target.y = 0.2
-	move_target.z = clampf(move_target.z, -19.5, 19.5)
+	move_target.z = clampf(move_target.z, -WORLD_HALF_EXTENT, WORLD_HALF_EXTENT)
 	has_move_target = true
 
 

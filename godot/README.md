@@ -43,12 +43,12 @@ playable.
 ## Current Prototype
 
 - third-person player controller
-- small 3D village scene with Quaternius CC0 modular village pieces,
-  props, trees, foliage, hazard/resource pressure zones
+- larger valley village scene with Quaternius CC0 modular village pieces,
+  props, tree line, farms, river, ruins, foliage, hazard/resource pressure zones
 - warmer medieval-fantasy village dressing: torches, well, market stall,
   campfire, chapel marker, blacksmith point, herb garden, fences, fog, and
   dynamic day/night lighting
-- three NPCs
+- eight NPCs distributed across the village and outer hamlets
 - CC0 rigged animated character variants are used when Godot can import the
   FBX character pack; generated humanoid bodies remain as runtime fallback
 - action-mapped input and pause/debug controls

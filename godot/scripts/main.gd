@@ -14,6 +14,8 @@ var day_speed := 0.018
 const MEDIEVAL_ASSET_ROOT := "res://assets/quaternius/medieval_village/glTF/"
 const PROP_ASSET_ROOT := "res://assets/quaternius/fantasy_props/Exports/glTF/"
 const NATURE_ASSET_ROOT := "res://assets/quaternius/stylized_nature/glTF/"
+const WORLD_HALF_EXTENT := 52.0
+const GROUND_SIZE := 104.0
 
 
 func _ready() -> void:
@@ -116,7 +118,7 @@ func _build_lighting() -> void:
 func _build_ground() -> void:
 	var ground := MeshInstance3D.new()
 	var plane := PlaneMesh.new()
-	plane.size = Vector2(44.0, 44.0)
+	plane.size = Vector2(GROUND_SIZE, GROUND_SIZE)
 	ground.mesh = plane
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = Color(0.30, 0.46, 0.31)
@@ -128,7 +130,7 @@ func _build_ground() -> void:
 	var body := StaticBody3D.new()
 	var collision := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
-	shape.size = Vector3(44.0, 0.2, 44.0)
+	shape.size = Vector3(GROUND_SIZE, 0.2, GROUND_SIZE)
 	collision.shape = shape
 	collision.position.y = -0.1
 	body.add_child(collision)
@@ -142,40 +144,113 @@ func _build_village() -> void:
 		[Vector3(6.5, 0.0, -1.5), Color(0.40, 0.30, 0.22)],
 		[Vector3(-9.0, 0.0, -1.8), Color(0.43, 0.31, 0.23)],
 		[Vector3(0.2, 0.0, -6.2), Color(0.36, 0.33, 0.28)],
+		[Vector3(-17.5, 0.0, 10.5), Color(0.42, 0.32, 0.25)],
+		[Vector3(15.5, 0.0, 11.5), Color(0.48, 0.35, 0.24)],
+		[Vector3(19.0, 0.0, -8.5), Color(0.36, 0.30, 0.24)],
+		[Vector3(-16.0, 0.0, -14.0), Color(0.45, 0.36, 0.28)],
+		[Vector3(0.5, 0.0, -18.5), Color(0.40, 0.31, 0.23)],
+		[Vector3(26.0, 0.0, 2.0), Color(0.44, 0.33, 0.22)],
+		[Vector3(-27.0, 0.0, 1.5), Color(0.37, 0.34, 0.30)],
 	]:
 		_add_hut(item[0], item[1])
 	_add_well(Vector3(-1.0, 0.0, -0.8))
 	_add_market_stall(Vector3(2.2, 0.0, -2.7))
+	_add_market_stall(Vector3(15.0, 0.0, -10.5))
 	_add_blacksmith(Vector3(8.0, 0.0, 3.2))
+	_add_blacksmith(Vector3(28.0, 0.0, -16.0))
 	_add_chapel_marker(Vector3(-8.7, 0.0, 5.6))
+	_add_chapel_marker(Vector3(-24.0, 0.0, 16.0))
 	_add_campfire(Vector3(0.0, 0.0, 2.2))
+	_add_campfire(Vector3(18.0, 0.0, 17.0))
 	_add_herb_garden(Vector3(-7.8, 0.0, -5.7))
+	_add_herb_garden(Vector3(-30.0, 0.0, -22.0))
+	_add_farmland(Vector3(23.0, 0.0, 23.0))
+	_add_farmland(Vector3(-22.0, 0.0, -26.0))
+	_add_ruins(Vector3(34.0, 0.0, 24.0))
+	_add_river()
 	for fence_x in [-4.0, -2.8, -1.6, 1.6, 2.8, 4.0]:
 		_add_fence(Vector3(fence_x, 0.0, -4.7), 0.0)
-	for i in range(26):
-		var angle := TAU * float(i) / 26.0
-		var radius_x := 15.0 + 2.5 * sin(float(i) * 1.7)
-		var radius_z := 13.5 + 2.0 * cos(float(i) * 1.2)
+	for i in range(86):
+		var angle := TAU * float(i) / 86.0
+		var radius_x := 43.0 + 6.5 * sin(float(i) * 1.7)
+		var radius_z := 40.0 + 6.0 * cos(float(i) * 1.2)
 		_add_tree(Vector3(cos(angle) * radius_x, 0.0, sin(angle) * radius_z))
-	for i in range(36):
-		var x := -17.0 + float((i * 7) % 34)
-		var z := -17.0 + float((i * 11) % 34)
+	for i in range(112):
+		var x := -46.0 + float((i * 17) % 92)
+		var z := -45.0 + float((i * 29) % 90)
 		if absf(x) > 3.0 or absf(z) > 5.0:
 			_add_grass_patch(Vector3(x, 0.0, z))
 
 
 func _add_path() -> void:
+	_add_path_segment(Vector3(0.0, 0.0, 0.0), Vector2(5.0, 64.0), 18.0)
+	_add_path_segment(Vector3(0.0, 0.0, 4.0), Vector2(4.2, 62.0), 92.0)
+	_add_path_segment(Vector3(-18.0, 0.0, -11.5), Vector2(3.4, 34.0), -42.0)
+	_add_path_segment(Vector3(21.5, 0.0, -5.5), Vector2(3.4, 38.0), 36.0)
+
+
+func _add_path_segment(pos: Vector3, size: Vector2, yaw: float) -> void:
 	var path := MeshInstance3D.new()
 	var plane := PlaneMesh.new()
-	plane.size = Vector2(5.0, 25.0)
+	plane.size = size
 	path.mesh = plane
-	path.position = Vector3(0.0, 0.012, 0.0)
-	path.rotation_degrees.y = 18.0
+	path.position = pos + Vector3(0.0, 0.012, 0.0)
+	path.rotation_degrees.y = yaw
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = Color(0.48, 0.40, 0.28)
 	mat.roughness = 1.0
 	path.material_override = mat
 	add_child(path)
+
+
+func _add_farmland(pos: Vector3) -> void:
+	var soil := MeshInstance3D.new()
+	var soil_mesh := PlaneMesh.new()
+	soil_mesh.size = Vector2(9.0, 6.0)
+	soil.mesh = soil_mesh
+	soil.position = pos + Vector3(0.0, 0.018, 0.0)
+	soil.material_override = _material(Color(0.20, 0.12, 0.07), 1.0)
+	add_child(soil)
+	for row in range(5):
+		for col in range(8):
+			if (row + col) % 2 == 0:
+				_add_grass_patch(pos + Vector3(-3.5 + col, 0.04, -2.0 + row))
+	for fence_z in [-3.2, 3.2]:
+		for i in range(7):
+			_add_fence(pos + Vector3(-3.6 + float(i) * 1.2, 0.0, fence_z), 0.0)
+
+
+func _add_ruins(pos: Vector3) -> void:
+	for i in range(5):
+		var stone := MeshInstance3D.new()
+		var mesh := BoxMesh.new()
+		mesh.size = Vector3(0.8 + 0.2 * float(i % 2), 1.2 + 0.45 * float(i), 0.55)
+		stone.mesh = mesh
+		stone.position = pos + Vector3(-2.0 + float(i), mesh.size.y * 0.5, sin(float(i)) * 0.8)
+		stone.rotation_degrees.y = -18.0 + float(i) * 9.0
+		stone.material_override = _material(Color(0.36, 0.37, 0.34), 0.96)
+		add_child(stone)
+	_add_chapel_marker(pos + Vector3(0.0, 0.0, 1.8))
+	_add_torch(pos + Vector3(-1.8, 0.0, -1.4))
+
+
+func _add_river() -> void:
+	var river := MeshInstance3D.new()
+	var mesh := PlaneMesh.new()
+	mesh.size = Vector2(86.0, 5.0)
+	river.mesh = mesh
+	river.position = Vector3(0.0, 0.02, 33.0)
+	river.rotation_degrees.y = -7.0
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.11, 0.28, 0.36, 0.82)
+	mat.emission_enabled = true
+	mat.emission = Color(0.05, 0.15, 0.20)
+	mat.emission_energy_multiplier = 0.18
+	mat.roughness = 0.38
+	river.material_override = mat
+	add_child(river)
+	for i in range(16):
+		_add_tree(Vector3(-40.0 + float(i) * 5.2, 0.0, 37.5 + sin(float(i) * 1.7) * 2.3))
 
 
 func _add_tree(pos: Vector3) -> void:
@@ -510,7 +585,7 @@ func _spawn_player() -> void:
 	var player := CharacterBody3D.new()
 	player.name = "Player"
 	player.set_script(load("res://scripts/player_controller.gd"))
-	player.position = Vector3(0.0, 0.2, 9.0)
+	player.position = Vector3(0.0, 0.2, 12.0)
 	add_child(player)
 
 
@@ -520,6 +595,11 @@ func _spawn_npcs() -> void:
 		["npc_mara", "Mara", Vector3(-2.0, 0.2, 1.0)],
 		["npc_ovan", "Ovan", Vector3(4.0, 0.2, 2.0)],
 		["npc_sera", "Sera", Vector3(-6.0, 0.2, -4.0)],
+		["npc_eldric", "Eldric", Vector3(-17.0, 0.2, 9.5)],
+		["npc_talia", "Talia", Vector3(16.0, 0.2, -9.5)],
+		["npc_bren", "Bren", Vector3(22.0, 0.2, 3.0)],
+		["npc_lysa", "Lysa", Vector3(-24.5, 0.2, 2.0)],
+		["npc_rowan", "Rowan", Vector3(17.5, 0.2, 16.0)],
 	]
 	for row in data:
 		var npc := CharacterBody3D.new()
@@ -533,8 +613,10 @@ func _spawn_npcs() -> void:
 
 
 func _spawn_pressure_markers() -> void:
-	_add_marker(Vector3(-8.0, 0.1, -6.0), Color(0.20, 0.78, 0.36), "Resource")
-	_add_marker(Vector3(7.0, 0.1, -7.0), Color(0.88, 0.18, 0.12), "Hazard")
+	_add_marker(Vector3(-28.0, 0.1, -22.0), Color(0.20, 0.78, 0.36), "Resource Grove")
+	_add_marker(Vector3(22.0, 0.1, 23.0), Color(0.20, 0.78, 0.36), "Farm Stores")
+	_add_marker(Vector3(31.0, 0.1, -26.0), Color(0.88, 0.18, 0.12), "Hazard Fen")
+	_add_marker(Vector3(35.0, 0.1, 24.0), Color(0.56, 0.36, 0.94), "Old Ruins")
 
 
 func _add_marker(pos: Vector3, color: Color, label_text: String) -> void:
