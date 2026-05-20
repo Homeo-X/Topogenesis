@@ -4,11 +4,19 @@ var info_label: Label
 var objective_label: Label
 var dialogue_label: Label
 var prompt_label: Label
+var focus_panel: ColorRect
+var focus_label: Label
 var debug_visible := true
 var dialogue_timer := 0.0
 
 
 func _ready() -> void:
+	var top_shadow := ColorRect.new()
+	top_shadow.color = Color(0.03, 0.025, 0.02, 0.42)
+	top_shadow.position = Vector2(0, 0)
+	top_shadow.size = Vector2(1280, 108)
+	add_child(top_shadow)
+
 	objective_label = Label.new()
 	objective_label.position = Vector2(16, 12)
 	objective_label.size = Vector2(1000, 64)
@@ -33,6 +41,20 @@ func _ready() -> void:
 	prompt_label.size = Vector2(900, 40)
 	prompt_label.add_theme_font_size_override("font_size", 18)
 	add_child(prompt_label)
+
+	focus_panel = ColorRect.new()
+	focus_panel.color = Color(0.03, 0.025, 0.02, 0.68)
+	focus_panel.position = Vector2(912, 112)
+	focus_panel.size = Vector2(340, 188)
+	focus_panel.visible = false
+	add_child(focus_panel)
+
+	focus_label = Label.new()
+	focus_label.position = Vector2(930, 126)
+	focus_label.size = Vector2(304, 160)
+	focus_label.add_theme_font_size_override("font_size", 17)
+	focus_label.visible = false
+	add_child(focus_label)
 
 
 func _process(delta: float) -> void:
@@ -62,6 +84,34 @@ func show_dialogue(text: String) -> void:
 
 func set_prompt(text: String) -> void:
 	prompt_label.text = text
+
+
+func set_focus_state(npc_name: String, state: Dictionary) -> void:
+	var need := str(state.get("dominant_need", "unknown"))
+	var need_total := float(state.get("need_total", 0.0))
+	var affect := float(state.get("affect_stability", 0.0))
+	var future := str(state.get("future_action", "observe"))
+	var trust := float(state.get("trust_player", 0.5))
+	var memory_events: Array = state.get("memory_events", [])
+	var memory_text := "none"
+	if not memory_events.is_empty() and typeof(memory_events[-1]) == TYPE_DICTIONARY:
+		memory_text = str(memory_events[-1].get("claim", "recent pressure"))
+	focus_label.text = "%s\nNeed: %s %.2f\nAffect stability: %.2f\nIntention: %s\nTrust: %.2f\nRecent memory: %s" % [
+		npc_name,
+		need,
+		need_total,
+		affect,
+		future.replace("_", " "),
+		trust,
+		memory_text,
+	]
+	focus_panel.visible = true
+	focus_label.visible = true
+
+
+func clear_focus_state() -> void:
+	focus_panel.visible = false
+	focus_label.visible = false
 
 
 func show_pause(paused: bool) -> void:

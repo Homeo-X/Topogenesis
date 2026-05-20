@@ -17,6 +17,12 @@ Optional Python cognition bridge:
 python -m topogenesis.game_bridge.server
 ```
 
+Or launch Godot and the bridge together:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File godot/run_with_bridge.ps1
+```
+
 When the bridge is running, Godot polls `http://127.0.0.1:8765/step` and imports
 NPC cognition snapshots. If it is not running, the local Godot fallback remains
 playable.
@@ -35,13 +41,16 @@ playable.
 
 - third-person player controller
 - small 3D village scene with huts, path, trees, hazard/resource pressure zones
+- warmer medieval-fantasy village dressing: torches, well, market stall,
+  campfire, chapel marker, blacksmith point, herb garden, fences, fog, and
+  dynamic day/night lighting
 - three NPCs
 - action-mapped input and pause/debug controls
 - objective state and JSON save/load
 - optional localhost Python cognition bridge
 - NPC affect/need/future-action state
 - overhead NPC state markers
-- interaction prompt and dialogue/debug HUD
+- immersive focus panel, interaction prompt, dialogue line, and debug HUD
 - `TopogenesisBridge` autoload as the future connection point to the Python
   Topogenesis backend
 
