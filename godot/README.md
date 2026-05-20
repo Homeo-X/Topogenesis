@@ -29,7 +29,8 @@ playable.
 
 ## Controls
 
-- `WASD`: move
+- Left mouse click: move to ground position
+- Mouse wheel: zoom camera in/out
 - `Shift`: sprint; when held near an NPC it creates threat pressure
 - `E`: interact with nearby NPC
 - `F1`: toggle debug HUD

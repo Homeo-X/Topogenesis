@@ -33,7 +33,7 @@ func _ready() -> void:
 	dialogue_label.position = Vector2(16, 604)
 	dialogue_label.size = Vector2(1100, 80)
 	dialogue_label.add_theme_font_size_override("font_size", 20)
-	dialogue_label.text = "WASD move | Shift sprint/threat | E interact | F1 debug | F5 save | F9 load | Esc pause"
+	dialogue_label.text = "Left click move | Mouse wheel zoom | Shift sprint/threat | E interact | F1 debug | F5 save | F9 load | Esc pause"
 	add_child(dialogue_label)
 
 	prompt_label = Label.new()
@@ -62,8 +62,8 @@ func _process(delta: float) -> void:
 	if Input.is_action_just_pressed("toggle_debug"):
 		debug_visible = not debug_visible
 		info_label.visible = debug_visible
-	if dialogue_timer <= 0.0 and not dialogue_label.text.begins_with("WASD"):
-		dialogue_label.text = "WASD move | Shift sprint/threat | E interact | F1 debug | F5 save | F9 load | Esc pause"
+	if dialogue_timer <= 0.0 and not dialogue_label.text.begins_with("Left click"):
+		dialogue_label.text = "Left click move | Mouse wheel zoom | Shift sprint/threat | E interact | F1 debug | F5 save | F9 load | Esc pause"
 
 	objective_label.text = "%s\n%s\n%s" % [
 		GameDirector.objective_text(),

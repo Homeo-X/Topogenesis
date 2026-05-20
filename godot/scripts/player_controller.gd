@@ -3,44 +3,98 @@ extends CharacterBody3D
 @export var speed := 6.0
 @export var sprint_speed := 8.5
 @export var acceleration := 16.0
+@export var braking := 18.0
 @export var gravity := 18.0
+@export var arrival_radius := 0.28
+@export var turn_speed := 10.0
+@export var zoom_step := 1.1
+@export var min_zoom := 4.8
+@export var max_zoom := 14.0
 
 const CHARACTER_ASSET_ROOT := "res://assets/quaternius/animated_characters/Ultimate Animated Character Pack - Nov 2019/FBX/"
 
 var look_target: Vector3 = Vector3.FORWARD
 var camera: Camera3D
+var move_target := Vector3.ZERO
+var has_move_target := false
+var camera_distance := 8.0
+var target_camera_distance := 8.0
 
 
 func _ready() -> void:
 	add_to_group("player")
+	move_target = global_position
 	_build_body()
 
 
-func _physics_process(delta: float) -> void:
-	var input_2d := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
-	var input_dir := Vector3(input_2d.x, 0.0, input_2d.y).normalized()
-	var active_speed := sprint_speed if Input.is_action_pressed("sprint") else speed
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed:
+		var mouse_event := event as InputEventMouseButton
+		if mouse_event.button_index == MOUSE_BUTTON_LEFT:
+			_set_move_target(mouse_event.position)
+		elif mouse_event.button_index == MOUSE_BUTTON_WHEEL_UP:
+			target_camera_distance = clampf(target_camera_distance - zoom_step, min_zoom, max_zoom)
+		elif mouse_event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			target_camera_distance = clampf(target_camera_distance + zoom_step, min_zoom, max_zoom)
 
-	var target_velocity := input_dir * active_speed
-	velocity.x = move_toward(velocity.x, target_velocity.x, acceleration * delta)
-	velocity.z = move_toward(velocity.z, target_velocity.z, acceleration * delta)
+
+func _physics_process(delta: float) -> void:
+	var to_target := move_target - global_position
+	to_target.y = 0.0
+	var distance := to_target.length()
+	var input_dir := Vector3.ZERO
+	if has_move_target and distance > arrival_radius:
+		input_dir = to_target.normalized()
+	elif has_move_target:
+		has_move_target = false
+
+	var active_speed := sprint_speed if Input.is_action_pressed("sprint") else speed
+	var slow_factor := clampf(distance / 1.7, 0.25, 1.0) if has_move_target else 0.0
+
+	if has_move_target:
+		var target_velocity := input_dir * active_speed * slow_factor
+		velocity.x = move_toward(velocity.x, target_velocity.x, acceleration * delta)
+		velocity.z = move_toward(velocity.z, target_velocity.z, acceleration * delta)
+	else:
+		velocity.x = move_toward(velocity.x, 0.0, braking * delta)
+		velocity.z = move_toward(velocity.z, 0.0, braking * delta)
 	if not is_on_floor():
 		velocity.y -= gravity * delta
 	else:
 		velocity.y = -0.1
 
 	move_and_slide()
-	if input_dir.length() > 0.01:
-		look_target = input_dir
-		rotation.y = atan2(-look_target.x, -look_target.z)
+	if Vector2(velocity.x, velocity.z).length() > 0.04:
+		look_target = Vector3(velocity.x, 0.0, velocity.z).normalized()
+		var target_yaw := atan2(-look_target.x, -look_target.z)
+		rotation.y = lerp_angle(rotation.y, target_yaw, minf(1.0, turn_speed * delta))
 	_update_camera(delta)
 
 
 func _update_camera(delta: float) -> void:
 	if camera == null:
 		return
-	var desired := Vector3(0.0, 5.8, 8.0)
+	camera_distance = lerpf(camera_distance, target_camera_distance, minf(1.0, 9.0 * delta))
+	var height := lerpf(3.8, 7.8, inverse_lerp(min_zoom, max_zoom, camera_distance))
+	var desired := Vector3(0.0, height, camera_distance)
 	camera.position = camera.position.lerp(desired, minf(1.0, 10.0 * delta))
+
+
+func _set_move_target(screen_position: Vector2) -> void:
+	if camera == null:
+		return
+	var origin := camera.project_ray_origin(screen_position)
+	var ray := camera.project_ray_normal(screen_position)
+	if absf(ray.y) < 0.001:
+		return
+	var distance_to_ground := (0.2 - origin.y) / ray.y
+	if distance_to_ground <= 0.0:
+		return
+	move_target = origin + ray * distance_to_ground
+	move_target.x = clampf(move_target.x, -19.5, 19.5)
+	move_target.y = 0.2
+	move_target.z = clampf(move_target.z, -19.5, 19.5)
+	has_move_target = true
 
 
 func _build_body() -> void:
