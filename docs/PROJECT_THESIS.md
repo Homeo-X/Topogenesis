@@ -31,6 +31,9 @@ compensates.
   parameters.
 - Claims must remain measurable through metrics, ablations, baselines, and
   reproducible runs.
+- Every subsystem should satisfy the functional role contracts in
+  [FUNCTIONAL_ROLES.md](FUNCTIONAL_ROLES.md): internal state must cause a
+  behavioral consequence and a measurable outcome.
 
 ## Non-Claims
 

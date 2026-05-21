@@ -6,6 +6,8 @@ measurable ecosystem simulation.
 Its thesis is pressure-driven cognition: needs, affect, communication, and
 action are coupled to viability pressure rather than scripted labels or pure
 reward optimization. See [docs/PROJECT_THESIS.md](docs/PROJECT_THESIS.md).
+The functionalist standard for judging each subsystem is defined in
+[docs/FUNCTIONAL_ROLES.md](docs/FUNCTIONAL_ROLES.md).
 
 New readers should start with [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)
 for verification commands, suggested experiment presets, and contribution areas.
@@ -98,6 +100,8 @@ The current release prioritizes transparency over polish:
 
 See [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) for first steps,
 [docs/PROJECT_THESIS.md](docs/PROJECT_THESIS.md) for the research thesis,
+[docs/FUNCTIONAL_ROLES.md](docs/FUNCTIONAL_ROLES.md) for subsystem role
+contracts and ablation standards,
 [docs/KNOWN_LIMITS.md](docs/KNOWN_LIMITS.md) for the current hardening
 checklist, and [docs/PRODUCTION_READINESS.md](docs/PRODUCTION_READINESS.md) for
 the production-readiness gates. Stress coverage is tracked in
