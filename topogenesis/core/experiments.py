@@ -31,6 +31,30 @@ PRESETS: Dict[str, ExperimentPreset] = {
         args=("--steps", "1000", "--agents", "1", "--world_size", "32", "--log_every", "100"),
         expected="Agent survives longer than baseline random motion.",
     ),
+    "ablation_no_affect": ExperimentPreset(
+        name="ablation_no_affect",
+        description="Survival run with affect disabled for functional comparison.",
+        args=("--steps", "1000", "--agents", "1", "--world_size", "32",
+              "--log_every", "100", "--ablate", "affect"),
+        expected="Runs without affect pressure and exposes changed role metrics.",
+    ),
+    "ablation_no_memory": ExperimentPreset(
+        name="ablation_no_memory",
+        description="Survival run with memory reads/writes disabled.",
+        args=("--steps", "1000", "--agents", "1", "--world_size", "32",
+              "--log_every", "100", "--ablate", "memory"),
+        expected="Runs without memory priors and exposes changed role metrics.",
+    ),
+    "ablation_reflex_only": ExperimentPreset(
+        name="ablation_reflex_only",
+        description="Approximate reflex baseline with richer cognitive roles disabled.",
+        args=("--steps", "1000", "--agents", "1", "--world_size", "32",
+              "--log_every", "100",
+              "--ablate", "affect", "--ablate", "memory",
+              "--ablate", "world_model", "--ablate", "imagination",
+              "--ablate", "communication", "--ablate", "social"),
+        expected="Survival depends mainly on viability reflex and body pressure.",
+    ),
     "lifetime_learning": ExperimentPreset(
         name="lifetime_learning",
         description="Single-agent learning without population pressure.",
@@ -64,4 +88,3 @@ def preset_args(name: str) -> Tuple[str, ...]:
     except KeyError as exc:
         names = ", ".join(sorted(PRESETS))
         raise KeyError(f"Unknown experiment '{name}'. Available: {names}") from exc
-

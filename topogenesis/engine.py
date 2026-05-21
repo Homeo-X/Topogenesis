@@ -296,9 +296,46 @@ class TopogenesisConfig:
     use_affect:        bool = True
     use_memory_consolidation: bool = True
     use_developmental_growth: bool = False
+    use_need_pressure: bool = True
+    use_reflex: bool = True
+    use_memory: bool = True
+    use_world_model: bool = True
+    use_future_simulation: bool = True
+    use_communication: bool = True
+    use_social_model: bool = True
+    use_field_coupling: bool = True
+    record_functional_roles: bool = True
     affect:    AffectConfig   = field(default_factory=AffectConfig)
     memory:    MemoryConfig   = field(default_factory=MemoryConfig)
     cognition: CognitiveConfig = field(default_factory=CognitiveConfig)
+
+
+ABLATION_FLAGS: Dict[str, str] = {
+    "affect": "use_affect",
+    "needs": "use_need_pressure",
+    "reflex": "use_reflex",
+    "memory": "use_memory",
+    "world_model": "use_world_model",
+    "imagination": "use_future_simulation",
+    "communication": "use_communication",
+    "social": "use_social_model",
+    "field": "use_field_coupling",
+}
+
+
+def apply_ablations(config: TopogenesisConfig,
+                    ablations: Optional[List[str]] = None) -> TopogenesisConfig:
+    """Return a config with named functional subsystems disabled."""
+    updates = {}
+    for name in ablations or []:
+        key = name.strip().lower()
+        if not key:
+            continue
+        if key not in ABLATION_FLAGS:
+            allowed = ", ".join(sorted(ABLATION_FLAGS))
+            raise ValueError(f"Unknown ablation '{name}'. Allowed: {allowed}")
+        updates[ABLATION_FLAGS[key]] = False
+    return replace(config, **updates) if updates else config
 
 # ─────────────────────────────────────────────────────────────────────────────
 # HELPER FUNCTIONS
@@ -3499,7 +3536,7 @@ class TopogenesisAgent:
             self.affect_state  = jnp.zeros(config.affect.valence_dim)
         else:
             self.affect_params = None
-            self.affect_state  = jnp.zeros(1)
+            self.affect_state  = jnp.zeros(config.affect.valence_dim)
 
         # ── Goal / drive ──────────────────────────────────────────────────
         self.goal_net_params = init_goal_net_params(
@@ -4014,11 +4051,12 @@ class TopogenesisAgent:
             jnp.asarray([10., 50., 200., 1000.], dtype=jnp.float32),
             cog.time_embed_dim)
         field_ctx = jnp.zeros(cog.spatial_attn_out)
-        try:
-            field_patch = self.sigma_field.sample_patch(slot_positions[0], patch_size=4)
-            field_ctx = field_patch[:cog.spatial_attn_out]
-        except Exception as exc:
-            self._record_soft_failure('field_context', exc)
+        if self.config.use_field_coupling:
+            try:
+                field_patch = self.sigma_field.sample_patch(slot_positions[0], patch_size=4)
+                field_ctx = field_patch[:cog.spatial_attn_out]
+            except Exception as exc:
+                self._record_soft_failure('field_context', exc)
 
         concept_ctx_jnp = jnp.zeros(cog.spatial_attn_out)
         if len(self.memory.episodic) >= 4:
@@ -4045,18 +4083,28 @@ class TopogenesisAgent:
 
         field_ctx = field_ctx + 0.30 * concept_ctx_jnp + 0.20 * broker_ctx_jnp
         body_pos_approx = np.array(jax.device_get(S_full[:3]), dtype=np.float32)
-        neural_gain = self.field_supervenience.compute_neural_gain(
-            self.sigma_field, body_pos_approx, self._current_genome_fidelity)
+        neural_gain = (
+            self.field_supervenience.compute_neural_gain(
+                self.sigma_field, body_pos_approx, self._current_genome_fidelity)
+            if self.config.use_field_coupling else 1.0)
 
         x_wm_base = jnp.concatenate([S_full, t_enc, field_ctx])
         x_wm = x_wm_base * float(neural_gain)
         h_f_prev, h_m_prev, h_s_prev = self.h_fast, self.h_medium, self.h_slow
-        S_next, h_f2, h_m2, h_s2, kl, gate_ent = self.wm.step(
-            x_wm, h_f_prev, h_m_prev, h_s_prev, self._step, key_wm)
-        S_next = jnp.clip(S_next, -5.0, 5.0)
-        sm_pred = sensorimotor_predict(
-            self.sensorimotor_params, S_full, jnp.asarray(action, dtype=jnp.float32))
-        S_next = jnp.clip(0.7 * S_next + 0.3 * sm_pred, -5.0, 5.0)
+        if self.config.use_world_model:
+            S_next, h_f2, h_m2, h_s2, kl, gate_ent = self.wm.step(
+                x_wm, h_f_prev, h_m_prev, h_s_prev, self._step, key_wm)
+            S_next = jnp.clip(S_next, -5.0, 5.0)
+            sm_pred = sensorimotor_predict(
+                self.sensorimotor_params, S_full, jnp.asarray(action, dtype=jnp.float32))
+            S_next = jnp.clip(0.7 * S_next + 0.3 * sm_pred, -5.0, 5.0)
+        else:
+            S_next = S_full
+            h_f2 = h_f_prev
+            h_m2 = h_m_prev
+            h_s2 = h_s_prev
+            kl = jnp.array(0.0, dtype=jnp.float32)
+            gate_ent = jnp.array(0.0, dtype=jnp.float32)
 
         self.h_fast = h_f2 * float(neural_gain)
         self.h_medium = h_m2 * float(neural_gain)
@@ -4066,8 +4114,9 @@ class TopogenesisAgent:
         if self._thermo_n_timescale_layers < 2:
             self.h_medium = jnp.zeros_like(self.h_medium)
 
-        self.cog_metabolism.charge(self.cog_metabolism.gru_cost(
-            self.config.latent_dim, n_layers=self._thermo_n_timescale_layers))
+        if self.config.use_world_model:
+            self.cog_metabolism.charge(self.cog_metabolism.gru_cost(
+                self.config.latent_dim, n_layers=self._thermo_n_timescale_layers))
 
         E_next, D_next, I_next = self.ss.decompose(S_next)
         self.deter_state = D_next[:cog.deter_dim]
@@ -4083,6 +4132,7 @@ class TopogenesisAgent:
             'h_f_prev': h_f_prev,
             'h_m_prev': h_m_prev,
             'h_s_prev': h_s_prev,
+            'neural_gain': float(neural_gain),
         }
 
     def _motor_stage(self, ws_final: jnp.ndarray, drives: jnp.ndarray,
@@ -4100,16 +4150,23 @@ class TopogenesisAgent:
             latent, key_pol, self.policy.to_params())
         self.cog_metabolism.charge(self.cog_metabolism.policy_cost())
 
-        reflex_action = self._viability_reflex(obs_jnp)
+        reflex_action = (
+            self._viability_reflex(obs_jnp)
+            if self.config.use_reflex else jnp.zeros(MAX_MOTORS, dtype=jnp.float32))
         learned_action = jnp.tanh(self.viability_actor_W @ viability_features)
         enactive_action = enactive_ac_mean(self.enactive_ac_params, viability_features)
         planner_action = self.planner.plan(S_full, drives, world_summary)
-        social_action = self.social.action_prior(peer_summary, viability_features)
+        social_action = (
+            self.social.action_prior(peer_summary, viability_features)
+            if self.config.use_social_model else jnp.zeros(MAX_MOTORS, dtype=jnp.float32))
         objective_weights = self.meta_hypernet.forward(drives, ws_final)
         mem_k = self.metabolic_super.memory_retrieval_k(
             self._current_body_energy, k_base=8)
-        memory_action = self.memory.retrieve_action_prior(np.array(S_full), k=mem_k)
-        self.cog_metabolism.charge(self.cog_metabolism.memory_retrieve_cost())
+        if self.config.use_memory:
+            memory_action = self.memory.retrieve_action_prior(np.array(S_full), k=mem_k)
+            self.cog_metabolism.charge(self.cog_metabolism.memory_retrieve_cost())
+        else:
+            memory_action = jnp.zeros(MAX_MOTORS, dtype=jnp.float32)
 
         language_action = jnp.tanh(
             self.language.action_bias(language_token, MAX_MOTORS))
@@ -4192,15 +4249,19 @@ class TopogenesisAgent:
             attachment_integrity=attachment_integrity,
             environmental_safety=environmental_safety,
         )
-        need_pressure = NeedPressure.from_viability(viability_state)
-        self.npc_affect.update(
-            prediction_error=1.0 - prediction_coherence,
-            uncertainty=max(need_pressure.epistemic, need_pressure.safety),
-            threat=need_pressure.safety,
-            attachment_delta=attachment_integrity - self.npc_affect.attachment_security,
-            social_support=social_stability,
-            control_feedback=viability - need_pressure.total,
-        )
+        need_pressure = (
+            NeedPressure.from_viability(viability_state)
+            if self.config.use_need_pressure else
+            NeedPressure(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0))
+        if self.config.use_affect:
+            self.npc_affect.update(
+                prediction_error=1.0 - prediction_coherence,
+                uncertainty=max(need_pressure.epistemic, need_pressure.safety),
+                threat=need_pressure.safety,
+                attachment_delta=attachment_integrity - self.npc_affect.attachment_security,
+                social_support=social_stability,
+                control_feedback=viability - need_pressure.total,
+            )
 
         mind = self.npc_minds.setdefault(
             'world', OtherMindModel(agent_id='world', trust=0.5, respect=0.5))
@@ -4213,28 +4274,40 @@ class TopogenesisAgent:
             social_risk=need_pressure.safety,
             urgency=max(need_pressure.metabolic, need_pressure.repair),
         )
-        interpretation = interpret_intent(intent, mind, self.npc_affect)
-        mind.update_belief(
-            intent.belief_to_modify,
-            interpretation.accepted_confidence,
-            source_trust=mind.trust)
-        self.npc_social_memory.remember(
-            agent_id='world',
-            kind='self_maintenance',
-            salience=max(need_pressure.total, interpretation.accepted_confidence),
-            valence=viability - need_pressure.total,
-            claim=need_pressure.dominant,
-        )
+        if self.config.use_communication:
+            interpretation = interpret_intent(intent, mind, self.npc_affect)
+            mind.update_belief(
+                intent.belief_to_modify,
+                interpretation.accepted_confidence,
+                source_trust=mind.trust)
+            self.npc_social_memory.remember(
+                agent_id='world',
+                kind='self_maintenance',
+                salience=max(need_pressure.total, interpretation.accepted_confidence),
+                valence=viability - need_pressure.total,
+                claim=need_pressure.dominant,
+            )
+            accepted_confidence = interpretation.accepted_confidence
+            suspicion_delta = interpretation.suspicion_delta
+        else:
+            accepted_confidence = 0.0
+            suspicion_delta = 0.0
         future_action = (
             'seek_food' if need_pressure.metabolic >= need_pressure.epistemic
             else 'verify')
-        future = simulate_future(
-            action=future_action,
-            needs=need_pressure,
-            affect=self.npc_affect,
-            listener=mind,
-            intent=intent,
-        )
+        future = (
+            simulate_future(
+                action=future_action,
+                needs=need_pressure,
+                affect=self.npc_affect,
+                listener=mind,
+                intent=intent,
+            )
+            if self.config.use_future_simulation else
+            simulate_future(
+                action='observe',
+                needs=NeedPressure(0, 0, 0, 0, 0, 0, 0),
+                affect=self.npc_affect))
         modulators = need_pressure.cognitive_modulators()
         state = {
             'viability': viability_state,
@@ -4243,8 +4316,8 @@ class TopogenesisAgent:
             'intent': intent,
             'future': future,
             'modulators': modulators,
-            'accepted_confidence': interpretation.accepted_confidence,
-            'suspicion_delta': interpretation.suspicion_delta,
+            'accepted_confidence': accepted_confidence,
+            'suspicion_delta': suspicion_delta,
         }
         self.last_npc_state = state
         return state
@@ -4273,7 +4346,8 @@ class TopogenesisAgent:
         world_summary = sensory['world_summary']
         consequence_risk = sensory['consequence_risk']
 
-        attention = self._attention_stage(obs_jnp, key_wm, pump_field)
+        attention = self._attention_stage(
+            obs_jnp, key_wm, pump_field and self.config.use_field_coupling)
         slots_2d = attention['slots_2d']
         slots_np = attention['slots_np']
         mask_np = attention['mask_np']
@@ -4292,6 +4366,7 @@ class TopogenesisAgent:
         h_f_prev = world_model['h_f_prev']
         h_m_prev = world_model['h_m_prev']
         h_s_prev = world_model['h_s_prev']
+        field_neural_gain_current = world_model['neural_gain']
 
         # ── 7. Anderson DEQ — joint equilibrium over [deter ‖ ws_partial] ───
         gain      = self.metastability_field.contraction_gain
@@ -4454,7 +4529,9 @@ class TopogenesisAgent:
             viability, float(ws_entropy), pred_err, survival_pressure)
 
         _broker_context_next: Optional[np.ndarray] = None
-        if broker_mode == ToolRequestBroker.MODE_IMAGINE:
+        if (broker_mode == ToolRequestBroker.MODE_IMAGINE
+                and self.config.use_future_simulation
+                and self.config.use_world_model):
             # Run internal rollout; imagined terminal state feeds GRU next step
             try:
                 _S_imagined = self.broker.imagine(
@@ -4522,18 +4599,21 @@ class TopogenesisAgent:
         # Hungry agents (low energy / low biosynthetic budget) consolidate fewer
         # memories or skip consolidation entirely.  This gates the metabolically
         # expensive process of transferring episodic → semantic memory.
-        _consol_cycles = self.metabolic_super.consolidation_cycles(
-            self._current_body_energy, self._current_biosynthetic)
+        _consol_cycles = (
+            self.metabolic_super.consolidation_cycles(
+                self._current_body_energy, self._current_biosynthetic)
+            if self.config.use_memory else 0)
         self.memory._metabolic_consolidation_cycles = _consol_cycles
         if _consol_cycles > 0:
             self.cog_metabolism.charge(
                 self.cog_metabolism.memory_consolidate_cost() * _consol_cycles)
-        self.memory.add(S_arr, S_next_arr, reward,
-                        prediction_error=pred_err,
-                        action=action_out,
-                        affect_state=np.array(self.affect_state))
+        if self.config.use_memory:
+            self.memory.add(S_arr, S_next_arr, reward,
+                            prediction_error=pred_err,
+                            action=action_out,
+                            affect_state=np.array(self.affect_state))
         # ── Thermodynamic cost: episodic write ───────────────────────────────
-        self.cog_metabolism.charge(self.cog_metabolism.memory_add_cost())
+            self.cog_metabolism.charge(self.cog_metabolism.memory_add_cost())
         self.last_S = S_full
 
         # ── Misc cognition updates ─────────────────────────────────────────
@@ -4674,6 +4754,27 @@ class TopogenesisAgent:
             'thermo_max_fp_iter':        self._thermo_max_fp_iter,
             'thermo_n_timescale_layers': self._thermo_n_timescale_layers,
         }
+        if self.config.record_functional_roles:
+            functional_roles = {
+                'viability_pressure': float(1.0 - viability),
+                'need_pressure': float(npc_state['needs'].total),
+                'affect_stability': float(self.npc_affect.stability),
+                'reflex_norm': float(jnp.linalg.norm(motor['reflex_action'])),
+                'memory_prior_norm': float(jnp.linalg.norm(memory_action)),
+                'world_model_error': float(wm_mse),
+                'future_value': float(npc_state['future'].value),
+                'communication_confidence': float(npc_state['accepted_confidence']),
+                'social_prior_norm': float(jnp.linalg.norm(social_action)),
+                'field_neural_gain': float(field_neural_gain_current),
+                'final_action_norm': float(jnp.linalg.norm(jnp.asarray(action_out))),
+            }
+            metrics['functional_roles'] = functional_roles
+            for role_name, role_value in functional_roles.items():
+                metrics[f'role_{role_name}'] = role_value
+            metrics['ablations_active'] = ",".join([
+                name for name, attr in ABLATION_FLAGS.items()
+                if not getattr(self.config, attr)
+            ])
         self.last_metrics = metrics
         # ── Physical supervenience: action is mediated by the body's physical state
         # Three components combine multiplicatively:
@@ -4748,10 +4849,14 @@ class TopogenesisAgent:
                 attn_context=peer_ctx)))
 
         # 2. Maintain genome in sigma field ───────────────────────────────────
-        gf_cost = self.genome_field_iface.write_to_field(self.genome, body, world.field)
-        body.energy = max(0.0, body.energy - gf_cost)
-        body.genome_field_fidelity = self.genome_field_iface.genome_fidelity(
-            self.genome, body, world.field)
+        if self.config.use_field_coupling:
+            gf_cost = self.genome_field_iface.write_to_field(self.genome, body, world.field)
+            body.energy = max(0.0, body.energy - gf_cost)
+            body.genome_field_fidelity = self.genome_field_iface.genome_fidelity(
+                self.genome, body, world.field)
+        else:
+            gf_cost = 0.0
+            body.genome_field_fidelity = 1.0
 
         # 3. Expose structural integrity for cognitive gating ─────────────────
         self._current_si = body.structural_integrity
@@ -4958,12 +5063,17 @@ def main(argv=None):
                         help='Save checkpoint every N steps. 0=disabled.')
     parser.add_argument('--checkpoint_path',  type=str,   default='ckpt',
                         help='Checkpoint filename prefix.')
+    parser.add_argument('--ablate', action='append', choices=sorted(ABLATION_FLAGS),
+                        default=[],
+                        help='Disable a functional subsystem; repeatable.')
     args = parser.parse_args(argv)
 
     print(f"[topogenesis] Initialising  steps={args.steps}  agents={args.agents}"
           f"  world={args.world_size}")
 
-    config = TopogenesisConfig()
+    config = apply_ablations(TopogenesisConfig(), args.ablate)
+    if args.ablate:
+        print(f"[topogenesis] Ablations active: {', '.join(args.ablate)}")
     rng    = jax.random.PRNGKey(args.seed)
 
     # Create world + agents

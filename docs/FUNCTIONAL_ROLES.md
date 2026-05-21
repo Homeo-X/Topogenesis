@@ -91,6 +91,29 @@ This ladder prevents the project from claiming intelligence merely because many
 modules are active at once. Each added layer must show what new functional work
 it performs.
 
+## Runtime Support
+
+The reference engine exposes repeatable ablation switches:
+
+```bash
+python -m experiments.run --experiment smoke --override --steps 10 --agents 1 --ablate affect
+python -m experiments.run --experiment smoke --override --steps 10 --agents 1 --ablate memory
+python -m experiments.run --experiment smoke --override --steps 10 --agents 1 --ablate communication
+python -m experiments.run --experiment smoke --override --steps 10 --agents 1 --ablate world_model
+```
+
+Supported names are:
+
+```text
+affect, needs, reflex, memory, world_model, imagination, communication, social, field
+```
+
+The engine also emits `role_*` metrics and a nested `functional_roles` trace in
+each step metrics dictionary. These traces connect internal states to behavioral
+work, including viability pressure, need pressure, reflex norm, memory prior
+norm, future value, communication confidence, social prior norm, field neural
+gain, world-model error, and final action norm.
+
 ## Pass And Fail Criteria
 
 A subsystem passes the functionalist standard when:
