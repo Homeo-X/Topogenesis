@@ -22,6 +22,7 @@ func _ready() -> void:
 	_configure_input_actions()
 	_build_lighting()
 	_build_ground()
+	_build_navigation_surface()
 	_build_village()
 	_spawn_player()
 	_spawn_npcs()
@@ -135,6 +136,21 @@ func _build_ground() -> void:
 	collision.position.y = -0.1
 	body.add_child(collision)
 	add_child(body)
+
+
+func _build_navigation_surface() -> void:
+	var region := NavigationRegion3D.new()
+	region.name = "ValleyNavigationRegion"
+	var nav_mesh := NavigationMesh.new()
+	nav_mesh.set_vertices(PackedVector3Array([
+		Vector3(-WORLD_HALF_EXTENT, 0.03, -WORLD_HALF_EXTENT),
+		Vector3(WORLD_HALF_EXTENT, 0.03, -WORLD_HALF_EXTENT),
+		Vector3(WORLD_HALF_EXTENT, 0.03, WORLD_HALF_EXTENT),
+		Vector3(-WORLD_HALF_EXTENT, 0.03, WORLD_HALF_EXTENT),
+	]))
+	nav_mesh.add_polygon(PackedInt32Array([0, 1, 2, 3]))
+	region.navigation_mesh = nav_mesh
+	add_child(region)
 
 
 func _build_village() -> void:
@@ -320,6 +336,7 @@ func _add_hut(pos: Vector3, color: Color) -> void:
 	collision.position = pos + Vector3(0.0, 1.0, 0.0)
 	body.add_child(collision)
 	add_child(body)
+	_add_navigation_obstacle(pos, 2.55, "hut")
 
 
 func _add_modular_hut(pos: Vector3, _color: Color) -> bool:
@@ -354,6 +371,7 @@ func _add_modular_hut(pos: Vector3, _color: Color) -> bool:
 	collision.position = pos + Vector3(0.0, 1.1, 0.0)
 	body.add_child(collision)
 	add_child(body)
+	_add_navigation_obstacle(pos, 2.75, "modular_hut")
 	return true
 
 
@@ -385,6 +403,7 @@ func _add_market_stall(pos: Vector3) -> void:
 		_add_asset(PROP_ASSET_ROOT + "FarmCrate_Apple.gltf", pos + Vector3(-0.45, 0.0, -0.35), Vector3.ONE * 0.75, -10.0)
 		_add_asset(PROP_ASSET_ROOT + "FarmCrate_Carrot.gltf", pos + Vector3(0.48, 0.0, -0.30), Vector3.ONE * 0.75, 12.0)
 		_add_torch(pos + Vector3(-1.25, 0.0, -0.65))
+		_add_navigation_obstacle(pos, 1.7, "market_stall")
 		return
 	var table := MeshInstance3D.new()
 	var table_mesh := BoxMesh.new()
@@ -403,6 +422,7 @@ func _add_market_stall(pos: Vector3) -> void:
 	awning.material_override = _material(Color(0.45, 0.11, 0.10), 0.78)
 	add_child(awning)
 	_add_torch(pos + Vector3(-1.25, 0.0, -0.65))
+	_add_navigation_obstacle(pos, 1.7, "market_stall")
 
 
 func _add_blacksmith(pos: Vector3) -> void:
@@ -410,6 +430,7 @@ func _add_blacksmith(pos: Vector3) -> void:
 		_add_asset(PROP_ASSET_ROOT + "Workbench.gltf", pos + Vector3(1.4, 0.0, 0.45), Vector3.ONE, 90.0)
 		_add_asset(PROP_ASSET_ROOT + "Axe_Bronze.gltf", pos + Vector3(-0.8, 0.0, 0.3), Vector3.ONE * 0.8, 35.0)
 		_add_torch(pos + Vector3(0.9, 0.0, -0.3))
+		_add_navigation_obstacle(pos, 1.35, "blacksmith")
 		return
 	var anvil := MeshInstance3D.new()
 	var anvil_mesh := BoxMesh.new()
@@ -419,6 +440,7 @@ func _add_blacksmith(pos: Vector3) -> void:
 	anvil.material_override = _material(Color(0.16, 0.16, 0.15), 0.5)
 	add_child(anvil)
 	_add_torch(pos + Vector3(0.9, 0.0, -0.3))
+	_add_navigation_obstacle(pos, 1.35, "blacksmith")
 
 
 func _add_chapel_marker(pos: Vector3) -> void:
@@ -436,6 +458,7 @@ func _add_chapel_marker(pos: Vector3) -> void:
 	cross.position = pos + Vector3(0.0, 1.38, -0.02)
 	cross.material_override = stone.material_override
 	add_child(cross)
+	_add_navigation_obstacle(pos, 0.9, "chapel_marker")
 
 
 func _add_campfire(pos: Vector3) -> void:
@@ -443,6 +466,7 @@ func _add_campfire(pos: Vector3) -> void:
 		_add_asset(PROP_ASSET_ROOT + "Bench.gltf", pos + Vector3(1.4, 0.0, 0.55), Vector3.ONE * 0.8, -18.0)
 		_add_asset(PROP_ASSET_ROOT + "Bench.gltf", pos + Vector3(-1.3, 0.0, -0.5), Vector3.ONE * 0.8, 162.0)
 		_add_torch(pos)
+		_add_navigation_obstacle(pos, 1.55, "campfire")
 		return
 	for i in range(6):
 		var rock := MeshInstance3D.new()
@@ -455,6 +479,7 @@ func _add_campfire(pos: Vector3) -> void:
 		rock.material_override = _material(Color(0.28, 0.27, 0.24), 0.92)
 		add_child(rock)
 	_add_torch(pos)
+	_add_navigation_obstacle(pos, 1.2, "campfire")
 
 
 func _add_herb_garden(pos: Vector3) -> void:
@@ -478,6 +503,16 @@ func _add_fence(pos: Vector3, yaw: float) -> void:
 	fence.rotation_degrees.y = yaw
 	fence.material_override = _material(Color(0.30, 0.19, 0.10), 0.88)
 	add_child(fence)
+	_add_navigation_obstacle(pos, 0.75, "fence")
+
+
+func _add_navigation_obstacle(pos: Vector3, radius: float, label: String) -> void:
+	var obstacle := Node3D.new()
+	obstacle.name = "NavObstacle_%s" % label
+	obstacle.position = pos
+	obstacle.set_meta("radius", radius)
+	obstacle.add_to_group("navigation_obstacle")
+	add_child(obstacle)
 
 
 func _add_grass_patch(pos: Vector3) -> void:

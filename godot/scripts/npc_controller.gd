@@ -5,6 +5,8 @@ extends CharacterBody3D
 @export var home_position := Vector3.ZERO
 @export var walk_speed := 1.65
 @export var turn_speed := 8.0
+@export var obstacle_lookahead := 3.2
+@export var obstacle_push_strength := 2.6
 
 const CHARACTER_ASSET_ROOT := "res://assets/quaternius/animated_characters/Ultimate Animated Character Pack - Nov 2019/FBX/"
 const WORLD_HALF_EXTENT := 50.0
@@ -19,12 +21,15 @@ var overhead_label: Label3D
 var pressure_ring: MeshInstance3D
 var body_material: StandardMaterial3D
 var cloak_material: StandardMaterial3D
+var navigation_agent: NavigationAgent3D
+var last_navigation_target := Vector3.INF
 
 
 func _ready() -> void:
 	add_to_group("npc")
 	TopogenesisBridge.register_npc(npc_id, display_name)
 	current_target = home_position
+	_build_navigation_agent()
 	_build_body()
 
 
@@ -49,10 +54,12 @@ func _physics_process(delta: float) -> void:
 		current_target = _desired_position(player, distance_to_player)
 		retarget_timer = 0.75 + 0.15 * float(npc_id.length() % 4)
 
-	var direction := global_position.direction_to(current_target)
+	var steering_target := _next_steering_target()
+	var direction := global_position.direction_to(steering_target)
 	direction.y = 0.0
 	if global_position.distance_to(current_target) > 0.65:
-		var target_velocity := direction.normalized() * walk_speed
+		var movement_dir := (direction.normalized() + _obstacle_avoidance()).normalized()
+		var target_velocity := movement_dir * walk_speed
 		velocity.x = move_toward(velocity.x, target_velocity.x, 5.5 * delta)
 		velocity.z = move_toward(velocity.z, target_velocity.z, 5.5 * delta)
 	else:
@@ -93,6 +100,59 @@ func debug_summary() -> String:
 
 func current_state() -> Dictionary:
 	return state.duplicate(true)
+
+
+func _build_navigation_agent() -> void:
+	navigation_agent = NavigationAgent3D.new()
+	navigation_agent.name = "NavigationAgent3D"
+	navigation_agent.path_desired_distance = 0.55
+	navigation_agent.target_desired_distance = 0.85
+	navigation_agent.radius = 0.42
+	navigation_agent.height = 1.55
+	navigation_agent.max_speed = walk_speed
+	navigation_agent.avoidance_enabled = false
+	add_child(navigation_agent)
+
+
+func _next_steering_target() -> Vector3:
+	if navigation_agent == null:
+		return current_target
+	if last_navigation_target.distance_to(current_target) > 0.25:
+		navigation_agent.target_position = current_target
+		last_navigation_target = current_target
+	if navigation_agent.is_navigation_finished():
+		return current_target
+	var next_position := navigation_agent.get_next_path_position()
+	if next_position.distance_to(global_position) < 0.2:
+		return current_target
+	return next_position
+
+
+func _obstacle_avoidance() -> Vector3:
+	var push := Vector3.ZERO
+	var forward := Vector3(velocity.x, 0.0, velocity.z)
+	var speed := forward.length()
+	if speed < 0.05:
+		forward = global_position.direction_to(current_target)
+		forward.y = 0.0
+	else:
+		forward = forward.normalized()
+	for obstacle in get_tree().get_nodes_in_group("navigation_obstacle"):
+		var node := obstacle as Node3D
+		if node == null:
+			continue
+		var offset := global_position - node.global_position
+		offset.y = 0.0
+		var distance := offset.length()
+		var radius := float(node.get_meta("radius", 1.0))
+		var influence := radius + obstacle_lookahead
+		if distance <= 0.01 or distance > influence:
+			continue
+		var ahead_weight := clampf(forward.dot(-offset.normalized()) * 0.7 + 0.3, 0.0, 1.0)
+		var strength := pow(1.0 - distance / influence, 2.0) * ahead_weight * obstacle_push_strength
+		push += offset.normalized() * strength
+	push.y = 0.0
+	return push
 
 
 func _desired_position(player: Node3D, distance_to_player: float) -> Vector3:
