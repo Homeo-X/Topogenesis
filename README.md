@@ -32,6 +32,11 @@ need pressure, compact models of other minds, communication intents, and small
 future simulations. Communication is represented as an attempted intervention on
 another agent's world model rather than a dialogue-tree response.
 
+The `topogenesis.world` package is the first scalable offline simulation layer.
+It runs lightweight batched NPC viability, needs, affect stability, locations,
+birth/death events, and kingdom-level metrics without Godot rendering or the
+heavy reference agent loop.
+
 ## North Star
 
 Topogenesis should become a self-maintaining artificial-life laboratory where agents
@@ -75,6 +80,12 @@ python -m experiments.run --experiment open_ended_ecology
 ```
 
 Use `--engine-path` only when intentionally testing an alternate engine module.
+
+For fast background population simulation:
+
+```bash
+python -m topogenesis.world.offline_sim --days 30 --population 200
+```
 
 ## Verification
 

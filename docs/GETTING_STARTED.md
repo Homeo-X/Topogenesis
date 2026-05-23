@@ -12,10 +12,15 @@ python -m pip install -e .
 
 python -m unittest discover -s tests -p "test_*.py"
 python -m experiments.run --experiment smoke
+python -m topogenesis.world.offline_sim --days 3 --population 200
 ```
 
 The `smoke` preset is the right first run. It verifies that the reference engine
 starts, steps, emits summaries, and exits without exceptions.
+
+The offline command verifies the scalable background simulator. It is much
+lighter than the integrated reference engine and is intended for 100-300+ NPC
+population pressure runs.
 
 For the Godot RPG vertical slice, you can also run the optional cognition bridge:
 
