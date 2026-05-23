@@ -68,6 +68,32 @@ class OfflineWorldTests(unittest.TestCase):
         self.assertGreaterEqual(needs.total, 0.0)
         self.assertLessEqual(needs.total, 1.0)
 
+    def test_default_world_is_regional_and_resource_typed(self):
+        world = WorldState.default(ticks_per_day=24, seed=2)
+
+        self.assertGreaterEqual(world.carrying_capacity, 800)
+        self.assertGreaterEqual(len([loc for loc in world.locations if loc.kind == "food"]), 5)
+        self.assertGreaterEqual(len([loc for loc in world.locations if loc.kind == "hazard"]), 4)
+
+        food_locations = [loc for loc in world.locations if loc.kind == "food"]
+        before = sum(loc.stock for loc in food_locations)
+        positions = food_locations[0].position.reshape(1, 2)
+        gained = world.consume_resource_near(positions, "food", demand=[1.0])
+        after = sum(loc.stock for loc in food_locations)
+
+        self.assertGreater(float(gained[0]), 0.0)
+        self.assertLess(after, before)
+        self.assertGreater(world.stock_fraction("food"), 0.0)
+
+    def test_hazard_profile_separates_damage_and_confusion(self):
+        world = WorldState.default(ticks_per_day=24, seed=4)
+        ruin = next(loc for loc in world.locations if loc.name == "old_ruins")
+        profile = world.hazard_profile_at(ruin.position.reshape(1, 2))
+
+        self.assertGreater(float(profile["danger"][0]), 0.0)
+        self.assertGreater(float(profile["confusion"][0]), 0.0)
+        self.assertGreaterEqual(float(profile["damage"][0]), 0.0)
+
 
 if __name__ == "__main__":
     unittest.main()

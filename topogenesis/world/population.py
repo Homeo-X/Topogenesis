@@ -20,6 +20,7 @@ class PopulationConfig:
     background_update_interval: int = 8
     movement_rate: float = 0.18
     energy_decay: float = 0.0015
+    water_decay: float = 0.0008
     social_decay: float = 0.002
     reproduction_min_age_days: float = 18.0 * 365.0
     reproduction_energy: float = 0.82
@@ -42,6 +43,8 @@ class NPCBatch:
     social_stability: np.ndarray
     attachment_integrity: np.ndarray
     environmental_safety: np.ndarray
+    hydration: np.ndarray
+    repair_material: np.ndarray
     affect_stability: np.ndarray
     social_bond: np.ndarray
     home_location: np.ndarray
@@ -57,11 +60,10 @@ class NPCBatch:
         rng = np.random.default_rng(seed)
         loc_positions = world.location_positions()
         home_indices = np.asarray([
-            world.nearest_location_index(loc.position, "home")
-            for loc in world.locations[:1]
+            idx for idx, loc in enumerate(world.locations) if loc.kind == "home"
         ], dtype=np.int32)
-        home_idx = np.full(count, home_indices[0] if len(home_indices) else 0, dtype=np.int32)
-        jitter = rng.normal(0.0, 4.0, size=(count, 2)).astype(np.float32)
+        home_idx = rng.choice(home_indices if len(home_indices) else np.asarray([0]), size=count).astype(np.int32)
+        jitter = rng.normal(0.0, 7.0, size=(count, 2)).astype(np.float32)
         position = loc_positions[home_idx] + jitter
         return cls(
             ids=np.arange(count, dtype=np.int32),
@@ -76,6 +78,8 @@ class NPCBatch:
             social_stability=rng.uniform(0.45, 0.85, size=count).astype(np.float32),
             attachment_integrity=rng.uniform(0.45, 0.85, size=count).astype(np.float32),
             environmental_safety=np.ones(count, dtype=np.float32) * 0.75,
+            hydration=rng.uniform(0.60, 1.0, size=count).astype(np.float32),
+            repair_material=rng.uniform(0.20, 0.70, size=count).astype(np.float32),
             affect_stability=rng.uniform(0.55, 0.85, size=count).astype(np.float32),
             social_bond=rng.uniform(0.15, 0.55, size=count).astype(np.float32),
             home_location=home_idx,
@@ -99,6 +103,8 @@ class NPCBatch:
         self.social_stability = np.append(self.social_stability, np.float32(0.65))
         self.attachment_integrity = np.append(self.attachment_integrity, np.float32(0.70))
         self.environmental_safety = np.append(self.environmental_safety, np.float32(0.75))
+        self.hydration = np.append(self.hydration, np.float32(0.82))
+        self.repair_material = np.append(self.repair_material, np.float32(0.20))
         self.affect_stability = np.append(self.affect_stability, np.float32(0.68))
         self.social_bond = np.append(self.social_bond, np.float32(0.25))
         self.home_location = np.append(self.home_location, self.home_location[parent_idx])
@@ -145,14 +151,34 @@ class PopulationManager:
             world.clock.advance()
             return self._metrics(world, batch, np.zeros(batch.size, dtype=np.float32))
 
-        food = world.resource_pressure_at(batch.position)
-        danger = world.danger_at(batch.position)
+        world.advance_ecology()
+        food = world.resource_pressure_at(batch.position, "food")
+        water = world.resource_pressure_at(batch.position, "water")
+        materials = world.resource_pressure_at(batch.position, "materials")
+        hazard = world.hazard_profile_at(batch.position)
+        danger = hazard["danger"]
+        damage = hazard["damage"]
+        confusion = hazard["confusion"]
         social_pull = world.social_pull_at(batch.position)
         day_step = 1.0 / max(1, world.clock.ticks_per_day)
 
         batch.age_days[alive] += day_step
+        food_gain = world.consume_resource_near(
+            batch.position, "food", np.where(alive, 0.030 * (1.0 - batch.energy), 0.0))
+        water_gain = world.consume_resource_near(
+            batch.position, "water", np.where(alive, 0.025 * (1.0 - batch.hydration), 0.0))
+        material_gain = world.consume_resource_near(
+            batch.position, "materials", np.where(alive, 0.010 * (1.0 - batch.repair_material), 0.0))
         batch.energy[alive] = np.clip(
-            batch.energy[alive] - cfg.energy_decay + 0.024 * food[alive],
+            batch.energy[alive] - cfg.energy_decay + 0.018 * food[alive] + food_gain[alive],
+            0.0, 1.0,
+        )
+        batch.hydration[alive] = np.clip(
+            batch.hydration[alive] - cfg.water_decay + 0.014 * water[alive] + water_gain[alive],
+            0.0, 1.0,
+        )
+        batch.repair_material[alive] = np.clip(
+            batch.repair_material[alive] + 0.010 * materials[alive] + material_gain[alive],
             0.0, 1.0,
         )
         batch.environmental_safety[alive] = np.clip(1.0 - danger[alive], 0.0, 1.0)
@@ -164,18 +190,21 @@ class PopulationManager:
         )
         batch.prediction_coherence[alive] = np.clip(
             batch.prediction_coherence[alive] * 0.998
-            + (1.0 - danger[alive]) * 0.002,
+            + (1.0 - danger[alive]) * 0.002
+            - confusion[alive] * 0.010,
             0.0, 1.0,
         )
         batch.bodily_integrity[alive] = np.clip(
-            batch.bodily_integrity[alive] - 0.006 * danger[alive] + 0.002 * food[alive],
+            batch.bodily_integrity[alive]
+            - 0.010 * damage[alive]
+            + 0.003 * batch.repair_material[alive],
             0.0, 1.0,
         )
 
         need_total = np.asarray(_batch_need_total(
             jnp.asarray(batch.energy),
             jnp.asarray(batch.bodily_integrity),
-            jnp.asarray(batch.memory_integrity),
+            jnp.asarray(np.minimum(batch.memory_integrity, batch.hydration)),
             jnp.asarray(batch.prediction_coherence),
             jnp.asarray(batch.social_stability),
             jnp.asarray(batch.attachment_integrity),
@@ -194,7 +223,7 @@ class PopulationManager:
             need_total = np.asarray(_batch_need_total(
                 jnp.asarray(batch.energy),
                 jnp.asarray(batch.bodily_integrity),
-                jnp.asarray(batch.memory_integrity),
+                jnp.asarray(np.minimum(batch.memory_integrity, batch.hydration)),
                 jnp.asarray(batch.prediction_coherence),
                 jnp.asarray(batch.social_stability),
                 jnp.asarray(batch.attachment_integrity),
@@ -204,14 +233,20 @@ class PopulationManager:
         return self._metrics(world, batch, need_total)
 
     def _choose_targets(self, world: WorldState, batch: NPCBatch, need_total: np.ndarray) -> None:
-        food_idx = world.nearest_location_index(np.zeros(2, dtype=np.float32), "food")
+        material_idx = world.nearest_location_index(np.zeros(2, dtype=np.float32), "materials")
         social_idx = world.nearest_location_index(np.zeros(2, dtype=np.float32), "social")
         home_idx = world.nearest_location_index(np.zeros(2, dtype=np.float32), "home")
         hungry = batch.energy < 0.70
+        thirsty = batch.hydration < 0.68
+        damaged = (batch.bodily_integrity < 0.72) | (batch.repair_material < 0.25)
         unsafe = batch.environmental_safety < 0.45
         isolated = batch.social_stability < 0.42
-        batch.target_location = np.where(hungry, food_idx, batch.target_location)
-        batch.target_location = np.where(isolated & ~hungry, social_idx, batch.target_location)
+        for idx in np.flatnonzero(hungry):
+            batch.target_location[idx] = world.best_resource_location_index(batch.position[idx], "food")
+        for idx in np.flatnonzero(thirsty & ~hungry):
+            batch.target_location[idx] = world.best_resource_location_index(batch.position[idx], "water")
+        batch.target_location = np.where(damaged & ~(hungry | thirsty), material_idx, batch.target_location)
+        batch.target_location = np.where(isolated & ~(hungry | thirsty | damaged), social_idx, batch.target_location)
         batch.target_location = np.where(unsafe, home_idx, batch.target_location)
         calm = (need_total < 0.22) & (self.rng.random(batch.size) < 0.02)
         batch.target_location = np.where(calm, batch.home_location, batch.target_location)
@@ -239,6 +274,7 @@ class PopulationManager:
         death_random = self.rng.random(batch.size)
         dying = (
             (batch.energy <= 0.02)
+            | (batch.hydration <= 0.02)
             | (batch.bodily_integrity <= 0.03)
             | (death_random < old_age_pressure * 0.0005)
         ) & batch.alive
@@ -251,6 +287,7 @@ class PopulationManager:
             batch.alive
             & (batch.age_days >= self.config.reproduction_min_age_days)
             & (batch.energy >= self.config.reproduction_energy)
+            & (batch.hydration >= 0.70)
             & (batch.social_bond >= self.config.reproduction_bond)
         )
         for idx in eligible:
@@ -281,7 +318,11 @@ class PopulationManager:
                 "deaths_total": float(self.deaths_total),
                 "mean_need": 1.0,
                 "mean_energy": 0.0,
+                "mean_hydration": 0.0,
                 "mean_affect_stability": 0.0,
+                "food_stock": world.stock_fraction("food"),
+                "water_stock": world.stock_fraction("water"),
+                "material_stock": world.stock_fraction("materials"),
             }
         return {
             "tick": float(world.clock.tick),
@@ -292,10 +333,16 @@ class PopulationManager:
             "mean_need": float(np.mean(need_total[alive])),
             "mean_energy": float(np.mean(batch.energy[alive])),
             "min_energy": float(np.min(batch.energy[alive])),
+            "mean_hydration": float(np.mean(batch.hydration[alive])),
+            "min_hydration": float(np.min(batch.hydration[alive])),
+            "mean_repair_material": float(np.mean(batch.repair_material[alive])),
             "mean_safety": float(np.mean(batch.environmental_safety[alive])),
             "mean_social": float(np.mean(batch.social_stability[alive])),
             "mean_affect_stability": float(np.mean(batch.affect_stability[alive])),
             "lineage_count": float(len(set(batch.lineage[alive].tolist()))),
+            "food_stock": world.stock_fraction("food"),
+            "water_stock": world.stock_fraction("water"),
+            "material_stock": world.stock_fraction("materials"),
         }
 
     def sample_viability(self, batch: NPCBatch, idx: int) -> Tuple[ViabilityState, NeedPressure]:

@@ -15,6 +15,9 @@ class OfflineSummary:
     mean_need_final: float
     mean_affect_final: float
     lineage_count_final: int
+    food_stock_final: float = 1.0
+    water_stock_final: float = 1.0
+    material_stock_final: float = 1.0
 
     @property
     def stable(self) -> bool:
@@ -43,4 +46,7 @@ class OfflineMetrics:
             mean_need_final=float(latest.get("mean_need", 1.0)),
             mean_affect_final=float(latest.get("mean_affect_stability", 0.0)),
             lineage_count_final=int(latest.get("lineage_count", 0.0)),
+            food_stock_final=float(latest.get("food_stock", 1.0)),
+            water_stock_final=float(latest.get("water_stock", 1.0)),
+            material_stock_final=float(latest.get("material_stock", 1.0)),
         )

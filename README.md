@@ -35,7 +35,10 @@ another agent's world model rather than a dialogue-tree response.
 The `topogenesis.world` package is the first scalable offline simulation layer.
 It runs lightweight batched NPC viability, needs, affect stability, locations,
 birth/death events, and kingdom-level metrics without Godot rendering or the
-heavy reference agent loop.
+heavy reference agent loop. Its default landscape is a larger regional map with
+multiple hamlets, farms, orchards, hunting grounds, water sources, material
+sites, and distinct hazard biomes whose effects separate danger, bodily damage,
+and prediction disruption.
 
 ## North Star
 

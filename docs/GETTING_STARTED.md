@@ -20,7 +20,9 @@ starts, steps, emits summaries, and exits without exceptions.
 
 The offline command verifies the scalable background simulator. It is much
 lighter than the integrated reference engine and is intended for 100-300+ NPC
-population pressure runs.
+population pressure runs. The default offline landscape includes multiple
+settlements, food sources with stock/regrowth, water/material sites, and several
+hazard biomes.
 
 For the Godot RPG vertical slice, you can also run the optional cognition bridge:
 
