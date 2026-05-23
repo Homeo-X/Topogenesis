@@ -15,5 +15,9 @@ topogenesis = "experiments.run:main"
 topogenesis-bridge = "topogenesis.game_bridge.server:main"
 topogenesis-offline = "topogenesis.world.offline_sim:main"
 
+[tool.setuptools.packages.find]
+include = ["topogenesis*", "experiments*"]
+exclude = ["godot*", "docs*", "tests*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
