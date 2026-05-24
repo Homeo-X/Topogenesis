@@ -19,8 +19,14 @@ func _init() -> void:
 		"res://assets/quaternius/medieval_village/glTF/Roof_RoundTiles_4x4.gltf",
 		"res://assets/quaternius/fantasy_props/Exports/glTF/Stall_Empty.gltf",
 		"res://assets/quaternius/fantasy_props/Exports/glTF/Anvil_Log.gltf",
+		"res://assets/quaternius/fantasy_props/Exports/glTF/Bookcase_2.gltf",
+		"res://assets/quaternius/fantasy_props/Exports/glTF/WeaponStand.gltf",
 		"res://assets/quaternius/stylized_nature/glTF/CommonTree_1.gltf",
+		"res://assets/quaternius/stylized_nature/glTF/DeadTree_1.gltf",
+		"res://assets/quaternius/stylized_nature/glTF/Bush_Common_Flowers.gltf",
 		"res://assets/quaternius/animated_characters/Ultimate Animated Character Pack - Nov 2019/FBX/Witch.fbx",
+		"res://assets/quaternius/animated_characters/Ultimate Animated Character Pack - Nov 2019/FBX/Worker_Female.fbx",
+		"res://assets/quaternius/animated_characters/Ultimate Animated Character Pack - Nov 2019/FBX/Soldier_Male.fbx",
 	]:
 		if not ResourceLoader.exists(path) and not FileAccess.file_exists(path):
 			failures.append("Missing resource: %s" % path)

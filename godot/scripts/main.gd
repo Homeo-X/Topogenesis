@@ -204,6 +204,11 @@ func _build_village() -> void:
 	_add_farmland(Vector3(23.0, 0.0, 23.0))
 	_add_farmland(Vector3(-22.0, 0.0, -26.0))
 	_add_ruins(Vector3(34.0, 0.0, 24.0))
+	_add_supply_yard(Vector3(-30.0, 0.0, -20.0))
+	_add_healer_corner(Vector3(-8.7, 0.0, -7.2))
+	_add_scribe_corner(Vector3(-23.5, 0.0, 13.0))
+	_add_guard_post(Vector3(29.5, 0.0, -12.5))
+	_add_hazard_fen(Vector3(31.0, 0.0, -26.0))
 	_add_river()
 	for fence_x in [-4.0, -2.8, -1.6, 1.6, 2.8, 4.0]:
 		_add_fence(Vector3(fence_x, 0.0, -4.7), 0.0)
@@ -217,6 +222,11 @@ func _build_village() -> void:
 		var z := -45.0 + float((i * 29) % 90)
 		if absf(x) > 3.0 or absf(z) > 5.0:
 			_add_grass_patch(Vector3(x, 0.0, z))
+	for i in range(26):
+		var wild_x := -58.0 + float((i * 31) % 116)
+		var wild_z := -56.0 + float((i * 43) % 112)
+		if Vector2(wild_x, wild_z).length() > 46.0:
+			_add_wild_growth(Vector3(wild_x, 0.0, wild_z), i)
 
 
 func _add_path() -> void:
@@ -255,6 +265,94 @@ func _add_farmland(pos: Vector3) -> void:
 	for fence_z in [-3.2, 3.2]:
 		for i in range(7):
 			_add_fence(pos + Vector3(-3.6 + float(i) * 1.2, 0.0, fence_z), 0.0)
+	_add_asset(PROP_ASSET_ROOT + "FarmCrate_Apple.gltf", pos + Vector3(-3.8, 0.0, -2.4), Vector3.ONE * 0.75, -16.0)
+	_add_asset(PROP_ASSET_ROOT + "FarmCrate_Carrot.gltf", pos + Vector3(3.8, 0.0, 2.4), Vector3.ONE * 0.75, 24.0)
+	_add_asset(PROP_ASSET_ROOT + "Bag.gltf", pos + Vector3(-2.7, 0.0, 2.45), Vector3.ONE * 0.75, 42.0)
+
+
+func _add_supply_yard(pos: Vector3) -> void:
+	for detail in [
+		[PROP_ASSET_ROOT + "Barrel_Apples.gltf", Vector3(-1.6, 0.0, -0.9), 0.85, 12.0],
+		[PROP_ASSET_ROOT + "FarmCrate_Apple.gltf", Vector3(0.1, 0.0, -1.1), 0.85, -18.0],
+		[PROP_ASSET_ROOT + "FarmCrate_Carrot.gltf", Vector3(1.35, 0.0, -0.8), 0.85, 16.0],
+		[PROP_ASSET_ROOT + "Bag.gltf", Vector3(-0.8, 0.0, 0.55), 0.9, 46.0],
+		[PROP_ASSET_ROOT + "Bucket_Metal.gltf", Vector3(1.1, 0.0, 0.7), 0.8, -28.0],
+		[PROP_ASSET_ROOT + "Stall_Cart_Empty.gltf", Vector3(2.8, 0.0, 0.2), 0.9, 72.0],
+	]:
+		_add_asset(detail[0], pos + detail[1], Vector3.ONE * detail[2], detail[3])
+	_add_navigation_obstacle(pos + Vector3(0.4, 0.0, -0.2), 2.2, "supply_yard")
+
+
+func _add_healer_corner(pos: Vector3) -> void:
+	for detail in [
+		[PROP_ASSET_ROOT + "Cauldron.gltf", Vector3(0.0, 0.0, 0.0), 0.8, 0.0],
+		[PROP_ASSET_ROOT + "Potion_1.gltf", Vector3(-0.9, 0.0, -0.35), 0.65, 14.0],
+		[PROP_ASSET_ROOT + "Potion_2.gltf", Vector3(-0.55, 0.0, -0.55), 0.65, -24.0],
+		[PROP_ASSET_ROOT + "SmallBottles_1.gltf", Vector3(0.8, 0.0, -0.25), 0.75, 30.0],
+		[PROP_ASSET_ROOT + "Shelf_Small_Bottles.gltf", Vector3(1.65, 0.0, 0.55), 0.82, -90.0],
+		[PROP_ASSET_ROOT + "Bench.gltf", Vector3(-1.45, 0.0, 0.7), 0.75, 18.0],
+	]:
+		_add_asset(detail[0], pos + detail[1], Vector3.ONE * detail[2], detail[3])
+	for i in range(9):
+		_add_grass_patch(pos + Vector3(-1.8 + 0.45 * float(i), 0.0, 1.7 + 0.18 * float(i % 2)))
+	_add_torch(pos + Vector3(0.0, 0.0, -1.2))
+	_add_navigation_obstacle(pos, 1.8, "healer_corner")
+
+
+func _add_scribe_corner(pos: Vector3) -> void:
+	for detail in [
+		[PROP_ASSET_ROOT + "Bookcase_2.gltf", Vector3(0.0, 0.0, 0.0), 0.9, 8.0],
+		[PROP_ASSET_ROOT + "BookStand.gltf", Vector3(-1.15, 0.0, -0.55), 0.85, -28.0],
+		[PROP_ASSET_ROOT + "Book_Stack_1.gltf", Vector3(0.95, 0.0, -0.4), 0.75, 16.0],
+		[PROP_ASSET_ROOT + "Scroll_1.gltf", Vector3(-0.2, 0.0, -1.15), 0.85, 48.0],
+		[PROP_ASSET_ROOT + "CandleStick_Triple.gltf", Vector3(1.4, 0.0, 0.75), 0.8, 0.0],
+	]:
+		_add_asset(detail[0], pos + detail[1], Vector3.ONE * detail[2], detail[3])
+	_add_navigation_obstacle(pos, 1.65, "scribe_corner")
+
+
+func _add_guard_post(pos: Vector3) -> void:
+	for detail in [
+		[PROP_ASSET_ROOT + "WeaponStand.gltf", Vector3(0.0, 0.0, 0.0), 0.9, -18.0],
+		[PROP_ASSET_ROOT + "Shield_Wooden.gltf", Vector3(1.0, 0.0, -0.35), 0.85, 22.0],
+		[PROP_ASSET_ROOT + "Sword_Bronze.gltf", Vector3(-0.85, 0.0, -0.25), 0.85, -42.0],
+		[PROP_ASSET_ROOT + "Banner_1.gltf", Vector3(0.2, 0.0, 1.3), 0.9, 0.0],
+		[PROP_ASSET_ROOT + "Crate_Metal.gltf", Vector3(1.45, 0.0, 0.75), 0.75, 38.0],
+	]:
+		_add_asset(detail[0], pos + detail[1], Vector3.ONE * detail[2], detail[3])
+	_add_torch(pos + Vector3(-1.3, 0.0, 0.8))
+	_add_navigation_obstacle(pos, 1.9, "guard_post")
+
+
+func _add_hazard_fen(pos: Vector3) -> void:
+	for i in range(14):
+		var angle := TAU * float(i) / 14.0
+		var radius := 2.5 + float(i % 4) * 1.15
+		var p := pos + Vector3(cos(angle) * radius, 0.0, sin(angle) * radius)
+		var asset := NATURE_ASSET_ROOT + _variant([
+			"DeadTree_1.gltf",
+			"DeadTree_3.gltf",
+			"TwistedTree_2.gltf",
+			"Mushroom_Common.gltf",
+			"Mushroom_Laetiporus.gltf",
+		], i)
+		_add_asset(asset, p, Vector3.ONE * (0.85 + 0.08 * float(i % 3)), float((i * 41) % 360))
+	for i in range(5):
+		_add_asset(NATURE_ASSET_ROOT + "Rock_Medium_2.gltf", pos + Vector3(-3.0 + float(i) * 1.4, 0.0, -1.4 + 0.55 * float(i % 2)), Vector3.ONE * 0.72, float(i * 21))
+	_add_torch(pos + Vector3(-2.2, 0.0, 1.8))
+	_add_navigation_obstacle(pos, 4.5, "hazard_fen")
+
+
+func _add_wild_growth(pos: Vector3, seed: int) -> void:
+	var asset := NATURE_ASSET_ROOT + _variant([
+		"Bush_Common_Flowers.gltf",
+		"Flower_3_Group.gltf",
+		"Flower_4_Group.gltf",
+		"Rock_Medium_1.gltf",
+		"Pebble_Round_3.gltf",
+		"Plant_7_Big.gltf",
+	], seed)
+	_add_asset(asset, pos, Vector3.ONE * (0.7 + 0.08 * float(seed % 4)), float((seed * 37) % 360))
 
 
 func _add_ruins(pos: Vector3) -> void:

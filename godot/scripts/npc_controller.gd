@@ -29,6 +29,10 @@ var navigation_agent: NavigationAgent3D
 var last_navigation_target := Vector3.INF
 var snapshot_target_position := Vector3.ZERO
 var snapshot_state: Dictionary = {}
+var character_model: Node3D
+var character_asset_path := ""
+var animation_player: AnimationPlayer
+var active_animation := ""
 
 
 func _ready() -> void:
@@ -85,6 +89,7 @@ func _physics_process(delta: float) -> void:
 	if Vector2(velocity.x, velocity.z).length() > 0.05:
 		var target_yaw := atan2(-velocity.x, -velocity.z)
 		rotation.y = lerp_angle(rotation.y, target_yaw, minf(1.0, turn_speed * delta))
+	_update_character_motion(delta)
 
 
 func interact() -> String:
@@ -150,6 +155,7 @@ func apply_offline_snapshot(data: Dictionary, scale: float) -> void:
 		"threat_salience": clampf(1.0 - float(data.get("environmental_safety", 0.76)), 0.0, 1.0),
 		"memory_events": [],
 	}
+	_refresh_character_model_for_calling(str(snapshot_state.get("calling", "villager")))
 
 
 func _snapshot_crowd_offset(data: Dictionary) -> Vector3:
@@ -365,17 +371,7 @@ func _build_body() -> void:
 
 
 func _add_character_model() -> Node3D:
-	var variants := [
-		"Worker_Female.fbx",
-		"Worker_Male.fbx",
-		"Witch.fbx",
-		"Wizard.fbx",
-		"Doctor_Female_Old.fbx",
-		"Doctor_Male_Old.fbx",
-		"Viking_Female.fbx",
-		"Viking_Male.fbx",
-	]
-	var path: String = CHARACTER_ASSET_ROOT + variants[absi(hash(npc_id)) % variants.size()]
+	var path := _character_path_for_calling(str(state.get("calling", "")))
 	if not FileAccess.file_exists(path):
 		return null
 	var packed = load(path)
@@ -389,7 +385,163 @@ func _add_character_model() -> Node3D:
 	model.scale = Vector3.ONE * 0.92
 	model.rotation_degrees.y = 180.0
 	add_child(model)
+	character_model = model
+	character_asset_path = path
+	animation_player = _find_animation_player(model)
 	return model
+
+
+func _refresh_character_model_for_calling(calling: String) -> void:
+	var path := _character_path_for_calling(calling)
+	if path == character_asset_path or not FileAccess.file_exists(path):
+		return
+	if character_model != null:
+		character_model.queue_free()
+		character_model = null
+		animation_player = null
+		active_animation = ""
+	character_asset_path = ""
+	_add_character_model_for_path(path)
+
+
+func _add_character_model_for_path(path: String) -> Node3D:
+	var packed = load(path)
+	if packed == null or not packed is PackedScene:
+		return null
+	var model := (packed as PackedScene).instantiate() as Node3D
+	if model == null:
+		return null
+	model.name = "RiggedVillager"
+	model.position = Vector3.ZERO
+	model.scale = Vector3.ONE * 0.92
+	model.rotation_degrees.y = 180.0
+	add_child(model)
+	character_model = model
+	character_asset_path = path
+	animation_player = _find_animation_player(model)
+	return model
+
+
+func _character_path_for_calling(calling: String) -> String:
+	var variants := _character_variants_for_calling(calling)
+	var seed_key := "%s:%s:%s" % [npc_id, display_name, calling]
+	return CHARACTER_ASSET_ROOT + variants[absi(hash(seed_key)) % variants.size()]
+
+
+func _character_variants_for_calling(calling: String) -> Array[String]:
+	var role := calling.to_lower()
+	if role.contains("guard") or role.contains("watch") or role.contains("hunter") or role.contains("scout"):
+		return [
+			"Knight_Male.fbx",
+			"Knight_Golden_Female.fbx",
+			"Soldier_Male.fbx",
+			"Soldier_Female.fbx",
+			"Viking_Male.fbx",
+			"Viking_Female.fbx",
+		]
+	if role.contains("healer") or role.contains("herbal") or role.contains("doctor"):
+		return [
+			"Doctor_Female_Old.fbx",
+			"Doctor_Male_Old.fbx",
+			"Doctor_Female_Young.fbx",
+			"Doctor_Male_Young.fbx",
+			"Witch.fbx",
+		]
+	if role.contains("scribe") or role.contains("scholar") or role.contains("mystic") or role.contains("seer"):
+		return [
+			"Wizard.fbx",
+			"Witch.fbx",
+			"OldClassy_Female.fbx",
+			"OldClassy_Male.fbx",
+			"Suit_Female.fbx",
+			"Suit_Male.fbx",
+		]
+	if role.contains("cook") or role.contains("inn") or role.contains("tavern"):
+		return [
+			"Chef_Female.fbx",
+			"Chef_Male.fbx",
+			"Casual2_Female.fbx",
+			"Casual2_Male.fbx",
+		]
+	if role.contains("field") or role.contains("farmer") or role.contains("forager") or role.contains("wood") or role.contains("labor"):
+		return [
+			"Worker_Female.fbx",
+			"Worker_Male.fbx",
+			"Casual_Female.fbx",
+			"Casual_Male.fbx",
+			"Casual3_Female.fbx",
+			"Casual3_Male.fbx",
+		]
+	if role.contains("elder"):
+		return [
+			"Doctor_Female_Old.fbx",
+			"Doctor_Male_Old.fbx",
+			"OldClassy_Female.fbx",
+			"OldClassy_Male.fbx",
+		]
+	return [
+		"Worker_Female.fbx",
+		"Worker_Male.fbx",
+		"Casual_Female.fbx",
+		"Casual_Male.fbx",
+		"Casual2_Female.fbx",
+		"Casual2_Male.fbx",
+		"Casual3_Female.fbx",
+		"Casual3_Male.fbx",
+		"OldClassy_Female.fbx",
+		"OldClassy_Male.fbx",
+	]
+
+
+func _find_animation_player(root: Node) -> AnimationPlayer:
+	if root is AnimationPlayer:
+		return root as AnimationPlayer
+	for child in root.get_children():
+		var found := _find_animation_player(child)
+		if found != null:
+			return found
+	return null
+
+
+func _update_character_motion(_delta: float) -> void:
+	if character_model == null:
+		return
+	var speed := Vector2(velocity.x, velocity.z).length()
+	if animation_player != null and animation_player.get_animation_list().size() > 0:
+		var wanted := _select_animation_name(speed)
+		if wanted != "" and wanted != active_animation:
+			animation_player.play(wanted)
+			active_animation = wanted
+		if speed > 0.08:
+			animation_player.speed_scale = clampf(speed / maxf(0.1, walk_speed), 0.7, 1.35)
+		else:
+			animation_player.speed_scale = 1.0
+		return
+	var t := float(Time.get_ticks_msec()) * 0.001
+	if speed > 0.08:
+		var gait := sin(t * 8.5 + float(absi(hash(npc_id)) % 10))
+		character_model.position.y = 0.035 * absf(gait)
+		character_model.rotation_degrees.z = 1.6 * gait
+		character_model.rotation_degrees.x = 0.8 * sin(t * 4.25)
+	else:
+		character_model.position.y = 0.012 * sin(t * 1.6 + float(npc_id.length()))
+		character_model.rotation_degrees.z = 0.5 * sin(t * 1.2)
+		character_model.rotation_degrees.x = 0.0
+
+
+func _select_animation_name(speed: float) -> String:
+	var names := animation_player.get_animation_list()
+	var intent := "idle" if speed <= 0.08 else "walk"
+	for anim_name in names:
+		var lowered := String(anim_name).to_lower()
+		if lowered.contains(intent):
+			return String(anim_name)
+	if speed > 0.08:
+		for anim_name in names:
+			var lowered := String(anim_name).to_lower()
+			if lowered.contains("run") or lowered.contains("move"):
+				return String(anim_name)
+	return String(names[0])
 
 
 func _add_eye(pos: Vector3) -> void:
