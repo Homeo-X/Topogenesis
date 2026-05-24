@@ -20,12 +20,12 @@ class CoreAgentSnapshot:
 
 @dataclass
 class CoreEngineRuntime:
-    """Small full-engine organism layer used by the game bridge.
+    """Small full-engine organism runtime for research-side validation.
 
     The batched offline ecology remains the scalable 100-300 NPC substrate.
     This runtime keeps one or more genuine TopogenesisAgent.self_maintain loops
-    alive so the online/offline bridge is anchored to the full reference engine
-    instead of only to the lightweight population approximation.
+    alive so lightweight population results can be compared against the full
+    reference engine instead of only the scalable approximation.
     """
 
     agent_count: int = 1

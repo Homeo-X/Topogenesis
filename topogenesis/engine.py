@@ -4217,7 +4217,7 @@ class TopogenesisAgent:
                               pred_err: float, wm_mse: float,
                               identity_drift: float, consequence_risk: float,
                               reward: float, peer_summary: dict) -> dict:
-        """Bridge engine viability metrics into RPG-style NPC cognition."""
+        """Map engine viability metrics into pressure-driven cognition."""
         health = float(organism_obs.get('health', 1.0))
         membrane = float(organism_obs.get('membrane', 1.0))
         body_integrity = float(np.clip(0.5 * health + 0.5 * membrane, 0.0, 1.0))
