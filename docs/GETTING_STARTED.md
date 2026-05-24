@@ -26,7 +26,7 @@ hazard biomes.
 
 This `agi-research` branch does not include the Godot RPG layer. Game-facing
 work lives on the `game-rpg` branch so research changes can focus on cognition,
-world modeling, evolution, metrics, and ablations.
+world modeling, scaling, hardening, metrics, and ablations.
 
 ## 2. Try More Interesting Presets
 
@@ -35,12 +35,11 @@ After `smoke` passes, try:
 ```bash
 python -m experiments.run --experiment single_agent_survival
 python -m experiments.run --experiment lifetime_learning
-python -m experiments.run --experiment reproduction_basic
 ```
 
 Longer presets may be slow on CPU because the integrated reference engine is
-still heavy. Start small before attempting `evolutionary_run` or
-`open_ended_ecology`.
+still heavy. Start small before increasing agent count, run length, or
+ablation breadth.
 
 ## 3. Read The Core Docs
 

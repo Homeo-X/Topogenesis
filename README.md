@@ -1,7 +1,7 @@
 # Topogenesis
 
-Topogenesis is a standalone embodied artificial-life and AGI research platform
-for modular, measurable ecosystem simulation.
+Topogenesis is a standalone embodied cognition and AGI research platform for
+modular, measurable agent simulation.
 
 This branch, `agi-research`, is intentionally research-only. The Godot RPG
 prototype and game-facing bridge live on the `game-rpg` branch.
@@ -19,14 +19,14 @@ This branch's deeper AGI-facing commitments are tracked in
 [docs/AGI_RESEARCH_BRANCH.md](docs/AGI_RESEARCH_BRANCH.md).
 
 Topogenesis is early-stage research software. The engine runs, but the
-cognitive, field, developmental, and evolutionary mechanisms should be treated
-as experimental hypotheses until validated by ablations, baselines, and
-long-run metrics.
+cognitive, field, memory, world-model, and control mechanisms should be treated
+as experimental hypotheses until validated by ablations, baselines, scaling
+tests, and long-run stability metrics.
 
 The integrated reference engine lives at `topogenesis/engine.py`. The surrounding
-package provides experiment presets, metrics contracts, offline population
-simulation, cognition primitives, and a target module layout so every subsystem
-can become separable, testable, ablatable, and measurable.
+package provides experiment presets, metrics contracts, cognition primitives,
+offline load-testing support, and a target module layout so every subsystem can
+become separable, testable, ablatable, scalable, and measurable.
 
 ## Research Focus
 
@@ -40,18 +40,15 @@ agents:
 - communication intents as belief interventions
 - hierarchical future simulation with cognitive cost
 
-The `topogenesis.world` package contains the scalable offline ecology layer. It
-runs lightweight batched viability, need pressure, affect stability, locations,
-birth/death events, and ecosystem-level metrics without rendering. Its default
-landscape includes multiple settlements, food sources with stock/regrowth,
-water/material sites, and distinct hazard biomes whose effects separate danger,
-bodily damage, and prediction disruption.
+The `topogenesis.world` package is treated here as a headless scaling and load
+testing substrate. It runs lightweight batched viability, need pressure, affect
+stability, location pressure, and population-level metrics without rendering.
 
 ## North Star
 
-Topogenesis should become a self-maintaining artificial-life laboratory where
-agents survive, learn, reproduce, mutate, build memory, alter their environment,
-and evolve under measurable ecological pressure.
+Topogenesis should become a hardened cognition laboratory where agents maintain
+viability, build memory, model consequences, regulate internal pressure, and
+scale to larger simulations under measurable computational limits.
 
 The AGI branch focuses on whether increasingly functional cognition can emerge
 from self-maintenance, world modeling, memory, social inference, imagination,
@@ -73,9 +70,6 @@ Stage 1 is a stable organism:
 python -m experiments.run --experiment smoke
 python -m experiments.run --experiment single_agent_survival
 python -m experiments.run --experiment lifetime_learning
-python -m experiments.run --experiment reproduction_basic
-python -m experiments.run --experiment evolutionary_run
-python -m experiments.run --experiment open_ended_ecology
 ```
 
 Use `--engine-path` only when intentionally testing an alternate engine module.
@@ -106,7 +100,7 @@ The current release prioritizes transparency over polish:
 - core mechanisms are heuristic and under active hardening
 - `topogenesis/engine.py` still contains the integrated reference engine
 - experiment presets are intentionally explicit and reproducible
-- ablations, dashboards, and baseline agents are planned next
+- ablations, dashboards, baseline agents, and scaling gates are planned next
 
 See [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) for first steps,
 [docs/PROJECT_THESIS.md](docs/PROJECT_THESIS.md) for the research thesis,

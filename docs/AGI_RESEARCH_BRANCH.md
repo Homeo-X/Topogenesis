@@ -2,7 +2,12 @@
 
 `agi-research` is the speculative cognition branch for Topogenesis. Its purpose
 is not to claim solved AGI. Its purpose is to turn ambitious cognition ideas
-into falsifiable role contracts, ablations, and measurable experiments.
+into falsifiable role contracts, ablations, scaling gates, and measurable
+hardening experiments.
+
+Broad artificial-life expansion claims are deferred. The current branch focus
+is core cognitive architecture: stable interfaces, bounded state, measurable
+ablation effects, and scaling behavior.
 
 ## Core Research Standard
 
@@ -21,8 +26,10 @@ The module `topogenesis.research.functionalism` defines:
 
 - `FunctionalRoleContract`
 - `EvidenceGate`
+- `ScalingGate`
 - `default_functionalist_ladder()`
 - `default_evidence_gates()`
+- `default_scaling_gates()`
 - `incomplete_contracts()`
 
 This gives the branch a concrete place to encode research commitments before
@@ -32,10 +39,12 @@ they are promoted into engine code.
 
 1. Convert each role contract into an experiment preset.
 2. Add multi-seed comparisons for each evidence gate.
-3. Track effect sizes, not just whether a run survives.
-4. Add failure-mode detectors for freezing, unbounded memory, and single-seed
+3. Add scaling gates for agent count, memory budget, tick latency, and failure
+   containment.
+4. Track effect sizes, not just whether a run survives.
+5. Add failure-mode detectors for freezing, unbounded memory, and single-seed
    artifacts.
-5. Promote only validated, branch-neutral mechanisms back to `main`.
+6. Promote only validated, branch-neutral mechanisms back to `main`.
 
 ## Research Boundary
 
@@ -44,5 +53,6 @@ with:
 
 - at least one ablation
 - at least one metric
+- at least one scaling or stability limit
 - a predicted behavioral difference
 - a failure mode that would falsify the claim

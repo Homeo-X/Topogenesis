@@ -22,25 +22,26 @@ artificial-life result. These are the current high-priority limits.
 - Genome modules have hard caps, but mutation retention and complexity cost
   need population-level tracking.
 
-## Biology And Ecology
+## Deferred Secondary Systems
 
-- Death thresholds are configurable and softened during juvenile life, but still
-  need calibration by experiment preset.
-- Reproduction currently uses hand-shaped viability gates.
-- The genome-in-field mechanism is promising, but needs visualization and
-  lineage-level inheritance metrics.
+- Some broad artificial-life mechanisms still exist in the integrated reference
+  engine, but they are not the current AGI-branch focus.
+- Treat those systems as deferred until cognition, scalability, JAX boundaries,
+  and hardening are stronger.
 
 ## Experimentation
 
 Needed before strong scientific claims:
 
 - null agents: random, reflex-only, memory-only
-- ablation presets: no field, no memory, no affect, no reproduction
-- long-run survival and extinction curves
-- lineage diversity and novelty metrics
-- dashboard/plots for field slices, agent paths, genome loci, and births/deaths
+- ablation presets: no field, no memory, no affect, no world model
+- long-run stability and failure-containment curves
+- scaling metrics: tick latency, memory growth, active-agent budget, subsystem
+  failure recovery
+- dashboard/plots for energy, pressure, action contributions, prediction error,
+  agent paths, and failure modes
 
 ## Success Criteria
 
-The platform should not claim open-ended evolution until descendants reliably
-show adaptive behaviors absent in ancestors under controlled baselines.
+The AGI branch should not claim AGI progress until architectural changes improve
+behavior, stability, or scalability against clear baselines.

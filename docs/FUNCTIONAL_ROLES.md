@@ -46,8 +46,7 @@ systems.
 | Policy and action synthesis | Reflex, learned policy, memory prior, affect, field bias | Compose final action from competing pressures | Motor/action command | Balances survival, learning, exploration, and social action | action entropy, contribution logs, task success | Reflex-only or policy-only agent |
 | Communication | Speaker state, listener model, social memory, intent | Attempt to alter another agent's predictive state | Communication intent and surface line | Produces persuasion, warning, deception, alliance, rumor, or silence | listener belief change, trust change, social stability | No-communication agent |
 | Social model | Other-agent observations, reputation, interaction memory | Estimate other minds and relationships | Trust, threat, attachment, expected response | Makes agents behave differently toward different actors | relationship stability, betrayal response, cooperation rate | No-social-model agent |
-| Field coupling | Local sigma field, lineage traces, agent pumping | Carry environmental memory and inherited context | Field bias and stability signal | Lets places become safer, unstable, inherited, or behaviorally meaningful | field persistence, niche reuse, lineage locality | No-field agent |
-| Genome and development | Parent genome, mutation, age, regulatory state | Bias body, cognition, metabolism, and life-stage changes | Developmental parameters and inherited priors | Enables heritable pressure-management strategies | parent-child similarity, trait retention, generation survival | No-mutation or no-development agent |
+| Field coupling | Local sigma field and agent pumping | Carry environmental memory and context | Field bias and stability signal | Lets places become safer, unstable, or behaviorally meaningful | field persistence, niche reuse, local stability | No-field agent |
 | Experiment layer | Seeds, configs, logs, checkpoints | Make claims reproducible and falsifiable | Metrics, traces, summaries, checkpoints | Converts behavior into evidence instead of anecdote | deterministic replay, smoke pass rate, long-run stability | No-logging run |
 
 ## Required Evidence Pattern
@@ -85,7 +84,7 @@ Use ablations from simple to rich:
 9. Full agent without communication
 10. Full agent with communication
 11. Full agent with field coupling
-12. Full agent with development and reproduction
+12. Full agent under scaling and latency pressure
 
 This ladder prevents the project from claiming intelligence merely because many
 modules are active at once. Each added layer must show what new functional work
@@ -143,4 +142,4 @@ When adding or refactoring a subsystem, include:
 - a trace field showing how the subsystem affected action
 
 The project should become less a collection of impressive mechanisms and more a
-measurable ecology of causal functions.
+measurable architecture of causal functions.

@@ -3,6 +3,7 @@ import unittest
 from topogenesis.research import (
     default_evidence_gates,
     default_functionalist_ladder,
+    default_scaling_gates,
     incomplete_contracts,
 )
 
@@ -22,6 +23,16 @@ class AgiResearchContractTests(unittest.TestCase):
         for gate in gates:
             self.assertTrue(gate.is_testable(), gate.claim)
             self.assertGreaterEqual(len(gate.failure_modes), 1)
+
+    def test_scaling_gates_are_actionable_and_ordered_by_load(self):
+        gates = default_scaling_gates()
+
+        self.assertGreaterEqual(len(gates), 3)
+        self.assertEqual(gates[0].target_agent_count, 1)
+        self.assertGreater(gates[-1].target_agent_count, gates[0].target_agent_count)
+        for gate in gates:
+            self.assertTrue(gate.is_actionable(), gate.name)
+            self.assertIn("memory", " ".join(gate.failure_modes + gate.required_checks))
 
 
 if __name__ == "__main__":

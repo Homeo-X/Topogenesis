@@ -40,6 +40,28 @@ class EvidenceGate:
         return bool(self.claim and self.required_baselines and self.required_metrics)
 
 
+@dataclass(frozen=True)
+class ScalingGate:
+    """A hardening gate for architecture, latency, and memory scaling."""
+
+    name: str
+    target_agent_count: int
+    max_tick_ms: float
+    max_memory_mb: float
+    required_checks: tuple[str, ...]
+    failure_modes: tuple[str, ...]
+
+    def is_actionable(self) -> bool:
+        return all((
+            bool(self.name.strip()),
+            self.target_agent_count > 0,
+            self.max_tick_ms > 0.0,
+            self.max_memory_mb > 0.0,
+            bool(self.required_checks),
+            bool(self.failure_modes),
+        ))
+
+
 def default_functionalist_ladder() -> tuple[FunctionalRoleContract, ...]:
     """Return the AGI branch's working ladder from viability to social cognition."""
     return (
@@ -87,6 +109,46 @@ def default_functionalist_ladder() -> tuple[FunctionalRoleContract, ...]:
             behavioral_effects=("cooperation", "avoidance", "warning"),
             metrics=("cooperation_rate", "betrayal_response", "belief_change"),
             ablations=("no_social_model", "no_communication"),
+        ),
+    )
+
+
+def default_scaling_gates() -> tuple[ScalingGate, ...]:
+    """Return near-term hardening gates for the AGI branch."""
+    return (
+        ScalingGate(
+            name="single_agent_core_stability",
+            target_agent_count=1,
+            max_tick_ms=250.0,
+            max_memory_mb=512.0,
+            required_checks=("finite_metrics", "no_soft_failure_spike", "bounded_memory"),
+            failure_modes=("nan_state", "unbounded_memory", "silent_fallback_loop"),
+        ),
+        ScalingGate(
+            name="small_batch_cognition",
+            target_agent_count=32,
+            max_tick_ms=1000.0,
+            max_memory_mb=1024.0,
+            required_checks=(
+                "bounded_tick_latency",
+                "bounded_action_norms",
+                "bounded_memory",
+                "seed_replay",
+            ),
+            failure_modes=("host_loop_bottleneck", "action_collapse", "single_seed_artifact"),
+        ),
+        ScalingGate(
+            name="background_population_pressure",
+            target_agent_count=300,
+            max_tick_ms=1500.0,
+            max_memory_mb=1536.0,
+            required_checks=(
+                "population_nonzero",
+                "finite_pressure",
+                "bounded_memory",
+                "no_runaway_events",
+            ),
+            failure_modes=("population_collapse_bug", "pressure_nan", "event_queue_growth"),
         ),
     )
 

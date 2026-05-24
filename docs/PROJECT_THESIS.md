@@ -4,13 +4,13 @@ Topogenesis explores biologically grounded, pressure-driven cognition for
 artificial life. Agents self-maintain under energy, bodily, social, and
 predictive instability; affect emerges as continuous viability pressure;
 communication is modeled as intervention on another agent's world model; and
-behavior is shaped by embodied costs, memory, field dynamics, development, and
-evolutionary pressure.
+behavior is shaped by embodied costs, memory, field dynamics, and hardening
+pressure.
 
 ## Core Claim
 
-The central claim is not that Topogenesis already produces open-ended evolution
-or robust autonomous intelligence. The claim is narrower:
+The central claim is not that Topogenesis already produces robust autonomous
+intelligence. The claim is narrower:
 
 > Cognition becomes more lifelike when needs, affect, communication, and action
 > are coupled to viability pressure instead of being scripted labels or pure
@@ -27,8 +27,8 @@ compensates.
 - Communication is a social intervention on another agent's predictive state.
 - Intelligence pays embodied costs through energy, damage, memory, and field
   stability.
-- Evolution should select pressure-management strategies, not only fixed action
-  parameters.
+- Architecture should scale pressure-management strategies without hidden
+  state leaks, runaway memory, or brittle single-agent assumptions.
 - Claims must remain measurable through metrics, ablations, baselines, and
   reproducible runs.
 - Every subsystem should satisfy the functional role contracts in
@@ -39,7 +39,6 @@ compensates.
 
 Topogenesis does not currently claim:
 
-- proven open-ended evolution
 - biological realism in the strong scientific sense
 - AAA-ready game AI middleware
 - scalable large-population cognition
@@ -57,8 +56,10 @@ The thesis becomes stronger only if future runs show measurable effects:
 - Communication changes listener beliefs, future behavior, and social memory in
   measurable ways.
 - Future simulation improves action selection under hazard/resource pressure.
-- Population runs preserve diversity instead of converging to one brittle tactic.
-- Descendants inherit different pressure-management styles that affect survival.
+- Larger runs preserve stability and useful behavior instead of collapsing into
+  frozen, noisy, or runaway dynamics.
+- Architectural changes improve tick latency, memory bounds, and failure
+  containment under load.
 - Long runs avoid NaNs, runaway fields, unbounded memory growth, and immediate
   extinction.
 
@@ -93,9 +94,9 @@ self-maintenance, uncertainty, memory, social pressure, and simulated futures.
 
 ## North Star
 
-The long-term goal is a self-maintaining artificial-life laboratory where agents
-survive, learn, reproduce, mutate, remember, communicate, alter their
-environment, and evolve under measurable ecological pressure.
+The near-term goal is a hardened cognition laboratory where agents maintain
+viability, remember, communicate, model consequences, regulate internal
+pressure, and scale under measurable computational pressure.
 
 The open question is whether pressure-driven cognition can produce richer,
 longer-lived, and more diverse agent behavior than scripts, reflexes, or pure
