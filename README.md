@@ -1,73 +1,61 @@
 # Topogenesis
 
-Topogenesis is a standalone embodied artificial-life research platform for modular,
+Topogenesis is a standalone embodied artificial-life platform for modular,
 measurable ecosystem simulation.
 
-Its thesis is pressure-driven cognition: needs, affect, communication, and
-action are coupled to viability pressure rather than scripted labels or pure
-reward optimization. See [docs/PROJECT_THESIS.md](docs/PROJECT_THESIS.md).
-The functionalist standard for judging each subsystem is defined in
+This `main` branch is the stable neutral base. It keeps the core Python engine,
+experiments, tests, offline ecology, and documentation without the game-specific
+Godot layer. The `game-rpg` branch carries the playable RPG prototype, while
+`agi-research` carries more speculative cognition and AGI-oriented work.
+
+Its thesis is pressure-driven cognition: needs, affect, communication, memory,
+future simulation, and action are coupled to viability pressure rather than
+scripted labels or pure reward optimization. See
+[docs/PROJECT_THESIS.md](docs/PROJECT_THESIS.md). The functionalist standard
+for judging each subsystem is defined in
 [docs/FUNCTIONAL_ROLES.md](docs/FUNCTIONAL_ROLES.md).
 
 New readers should start with [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)
 for verification commands, suggested experiment presets, and contribution areas.
 
-A first Godot 4.6 3D RPG prototype lives in [godot/](godot/). It provides a
-small village, a third-person player, NPC pressure/affect state, interaction,
-and a bridge point for connecting the Python Topogenesis backend.
+Topogenesis is early-stage research software. The engine runs, but the
+cognitive, field, developmental, and evolutionary mechanisms should be treated
+as experimental hypotheses until validated by ablations, baselines, and
+long-run metrics.
 
-## One-Command Godot Launch
+The integrated reference engine lives at `topogenesis/engine.py`. The surrounding
+package provides experiment presets, metrics contracts, offline population
+simulation, cognition primitives, and a target module layout so every subsystem
+can become separable, testable, ablatable, and measurable.
 
-On Windows, run the RPG prototype with the bundled launcher:
+## Platform Focus
 
-```powershell
-cd "C:\Users\rsijr\Documents\Codex\2026-05-15\topogenesis"
-powershell -ExecutionPolicy Bypass -File .\launch_topogenesis.ps1
-```
+The `topogenesis.npc` package contains cognition primitives for pressure-driven
+agents:
 
-The launcher starts the Python cognition/world bridge, waits until it is ready,
-then opens the Godot project. When Godot closes, the launcher stops the bridge.
-You can also double-click `launch_topogenesis.bat`.
+- affect as a continuous internal pressure field
+- needs emerging from viability deficits
+- episodic and semantic memory
+- compact models of other minds
+- communication intents as belief interventions
+- hierarchical future simulation with cognitive cost
 
-Topogenesis is early-stage research software. The engine runs, but the cognitive,
-field, developmental, and evolutionary mechanisms should be treated as
-experimental hypotheses until validated by ablations, baselines, and long-run
-metrics.
-
-The engine entrypoint lives inside this project at `topogenesis/engine.py`. The
-surrounding package provides stable experiment presets, metrics contracts, and a
-target module layout so every subsystem can become separable, testable,
-ablatable, and measurable.
-
-The `topogenesis.npc` package is the first RPG cognition layer. It models NPCs
-as self-maintaining predictive agents with continuous affect fields, emergent
-need pressure, compact models of other minds, communication intents, and small
-future simulations. Communication is represented as an attempted intervention on
-another agent's world model rather than a dialogue-tree response.
-
-The `topogenesis.world` package is the first scalable offline simulation layer.
-It runs lightweight batched NPC viability, needs, affect stability, locations,
-birth/death events, and kingdom-level metrics without Godot rendering or the
-heavy reference agent loop. Its default landscape is a larger regional map with
-multiple hamlets, farms, orchards, hunting grounds, water sources, material
-sites, and distinct hazard biomes whose effects separate danger, bodily damage,
-and prediction disruption.
-
-The Godot bridge exposes the same offline region through `/world_snapshot`.
-When the Python bridge is running, Godot NPC pressure reads use that shared
-food/hazard landscape instead of the older local-only pressure centers.
-The bridge also runs a full `TopogenesisAgent.self_maintain(...)` organism in
-the background by default and exposes it as the first visible `Core Organism`.
-The remaining villagers continue to use the scalable batched population layer
-so the game can show hundreds of NPCs without trying to run the heavy reference
-engine hundreds of times per frame. Start the bridge with `--no-full-engine`
-only when you intentionally want the lightweight population model alone.
+The `topogenesis.world` package contains the scalable offline ecology layer. It
+runs lightweight batched viability, need pressure, affect stability, locations,
+birth/death events, and ecosystem-level metrics without rendering. Its default
+landscape includes multiple settlements, food sources with stock/regrowth,
+water/material sites, and distinct hazard biomes whose effects separate danger,
+bodily damage, and prediction disruption.
 
 ## North Star
 
-Topogenesis should become a self-maintaining artificial-life laboratory where agents
-survive, learn, reproduce, mutate, build memory, alter their environment, and
-evolve under measurable ecological pressure.
+Topogenesis should become a self-maintaining artificial-life laboratory where
+agents survive, learn, reproduce, mutate, build memory, alter their environment,
+and evolve under measurable ecological pressure.
+
+Specialized branches can push this foundation in different directions. The
+stable base focuses on keeping the engine runnable, measurable, ablatable, and
+easy to extend.
 
 ## First Stable Target
 
@@ -78,21 +66,6 @@ Stage 1 is a stable organism:
 - resources and hazards exert clear pressure
 - cognition has explicit action contributions and metabolic costs
 - checkpoints and run summaries are reproducible
-
-## RPG NPC Cognition
-
-The NPC layer is deliberately label-light:
-
-- affect is a continuous pressure field, not fixed emotion tags
-- needs emerge from viability deficits instead of scripted counters
-- social memory records reputation-shaping events
-- communication intents target belief changes in other agents
-- future simulation compares action consequences before acting or speaking
-
-These primitives now feed the reference agent loop through a narrow bridge:
-engine viability metrics update NPC affect, need pressure, social memory,
-communication intent, and future simulation. The resulting instability profile
-is exposed in metrics and gently gates motor output toward reflex under risk.
 
 ## Run Presets
 

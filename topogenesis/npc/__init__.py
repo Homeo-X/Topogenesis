@@ -1,4 +1,4 @@
-"""NPC cognition primitives for RPG-style Topogenesis agents."""
+"""Pressure-driven cognition primitives for Topogenesis agents."""
 
 from .affect import AffectField
 from .communication import CommunicationIntent, MessageInterpretation, interpret_intent

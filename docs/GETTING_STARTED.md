@@ -24,14 +24,10 @@ population pressure runs. The default offline landscape includes multiple
 settlements, food sources with stock/regrowth, water/material sites, and several
 hazard biomes.
 
-For the Godot RPG vertical slice, you can also run the optional cognition bridge:
-
-```bash
-python -m topogenesis.game_bridge.server
-```
-
-Then open `godot/` in Godot 4.6.2. If the server is not running, the Godot slice
-falls back to its local cognition model.
+The `main` branch does not include the Godot RPG layer. Game-facing work lives
+on the `game-rpg` branch, while more speculative cognition and AGI-oriented work
+lives on `agi-research`. This branch is the neutral stable base for the engine,
+experiments, metrics, and ablations.
 
 ## 2. Try More Interesting Presets
 
