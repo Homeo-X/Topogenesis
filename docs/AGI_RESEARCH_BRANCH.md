@@ -35,16 +35,26 @@ The module `topogenesis.research.functionalism` defines:
 This gives the branch a concrete place to encode research commitments before
 they are promoted into engine code.
 
+The module `topogenesis.research.predictive_cognition` starts the persistent
+world-model and memory architecture. Its core loop is:
+
+```text
+prediction -> sensory input -> confirmation signal -> model update -> memory
+```
+
+See `docs/PERSISTENT_PREDICTIVE_COGNITION.md`.
+
 ## Near-Term AGI Work
 
 1. Convert each role contract into an experiment preset.
 2. Add multi-seed comparisons for each evidence gate.
 3. Add scaling gates for agent count, memory budget, tick latency, and failure
    containment.
-4. Track effect sizes, not just whether a run survives.
-5. Add failure-mode detectors for freezing, unbounded memory, and single-seed
+4. Connect runtime sensory observations into `SensoryConfirmationLoop`.
+5. Track effect sizes, not just whether a run survives.
+6. Add failure-mode detectors for freezing, unbounded memory, and single-seed
    artifacts.
-6. Promote only validated, branch-neutral mechanisms back to `main`.
+7. Promote only validated, branch-neutral mechanisms back to `main`.
 
 ## Research Boundary
 

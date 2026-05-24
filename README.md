@@ -17,6 +17,8 @@ New readers should start with [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)
 for verification commands, suggested experiment presets, and contribution areas.
 This branch's deeper AGI-facing commitments are tracked in
 [docs/AGI_RESEARCH_BRANCH.md](docs/AGI_RESEARCH_BRANCH.md).
+The persistent world-model and sensory-confirmation direction is described in
+[docs/PERSISTENT_PREDICTIVE_COGNITION.md](docs/PERSISTENT_PREDICTIVE_COGNITION.md).
 
 Topogenesis is early-stage research software. The engine runs, but the
 cognitive, field, memory, world-model, and control mechanisms should be treated

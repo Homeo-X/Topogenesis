@@ -9,6 +9,16 @@ from .functionalism import (
     default_scaling_gates,
     incomplete_contracts,
 )
+from .predictive_cognition import (
+    ConfirmationSignal,
+    PersistentMemory,
+    PersistentWorldModel,
+    Prediction,
+    SensoryConfirmationLoop,
+    SensoryObservation,
+    WorldEntity,
+    compare_prediction,
+)
 
 __all__ = [
     "EvidenceGate",
@@ -18,4 +28,12 @@ __all__ = [
     "default_functionalist_ladder",
     "default_scaling_gates",
     "incomplete_contracts",
+    "ConfirmationSignal",
+    "PersistentMemory",
+    "PersistentWorldModel",
+    "Prediction",
+    "SensoryConfirmationLoop",
+    "SensoryObservation",
+    "WorldEntity",
+    "compare_prediction",
 ]
