@@ -4,8 +4,8 @@ Topogenesis is a standalone embodied artificial-life platform for modular,
 measurable ecosystem simulation.
 
 This `main` branch is the stable neutral base. It keeps the core Python engine,
-experiments, tests, offline ecology, and documentation without the game-specific
-Godot layer. See [docs/BRANCHES.md](docs/BRANCHES.md) for how `main`,
+experiments, tests, and documentation without the game-specific Godot layer or
+offline RPG population simulator. See [docs/BRANCHES.md](docs/BRANCHES.md) for how `main`,
 `game-rpg`, and `agi-research` are separated.
 
 Its thesis is pressure-driven cognition: needs, affect, communication, memory,
@@ -24,9 +24,9 @@ as experimental hypotheses until validated by ablations, baselines, and
 long-run metrics.
 
 The integrated reference engine lives at `topogenesis/engine.py`. The surrounding
-package provides experiment presets, metrics contracts, offline population
-simulation, cognition primitives, and a target module layout so every subsystem
-can become separable, testable, ablatable, and measurable.
+package provides experiment presets, metrics contracts, cognition primitives,
+and a target module layout so every subsystem can become separable, testable,
+ablatable, and measurable.
 
 ## Platform Focus
 
@@ -40,12 +40,8 @@ agents:
 - communication intents as belief interventions
 - hierarchical future simulation with cognitive cost
 
-The `topogenesis.world` package contains the scalable offline ecology layer. It
-runs lightweight batched viability, need pressure, affect stability, locations,
-birth/death events, and ecosystem-level metrics without rendering. Its default
-landscape includes multiple settlements, food sources with stock/regrowth,
-water/material sites, and distinct hazard biomes whose effects separate danger,
-bodily damage, and prediction disruption.
+The offline population/world simulator has moved out of `main`. It now belongs
+to `game-rpg`, where it supports the playable village and bridge layer.
 
 ## North Star
 
@@ -79,12 +75,6 @@ python -m experiments.run --experiment open_ended_ecology
 ```
 
 Use `--engine-path` only when intentionally testing an alternate engine module.
-
-For fast background population simulation:
-
-```bash
-python -m topogenesis.world.offline_sim --days 30 --population 200
-```
 
 ## Verification
 

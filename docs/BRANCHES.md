@@ -8,13 +8,13 @@ Stable neutral base.
 
 - core Python engine
 - experiment presets
-- offline ecology simulator
 - tests and validation docs
 - branch-neutral architecture notes
 
 `main` should stay runnable, compact, and conservative. It should not contain
-Godot game assets, branch-specific launchers, or speculative research-only
-interfaces unless they have become stable enough to serve the whole project.
+Godot game assets, branch-specific launchers, the offline RPG population/world
+simulator, or speculative research-only interfaces unless they have become
+stable enough to serve the whole project.
 
 ## `game-rpg`
 
@@ -24,6 +24,7 @@ Playable RPG branch.
 - player/NPC controllers
 - visual assets
 - game bridge and launch scripts
+- offline population/world simulator
 - RPG-facing UX, camera, movement, world, and villager presentation
 
 Game features should land here first. Stable engine improvements can later be

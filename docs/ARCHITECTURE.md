@@ -4,16 +4,13 @@ Topogenesis is organized around five layers.
 
 ## 1. World Layer
 
-Owns terrain, voxels, resources, hazards, field physics, gravity, collisions,
-and ecological cycles.
+Owns terrain, resources, hazards, field physics, gravity, collisions, and
+world-state interfaces.
 
 Target modules:
 
-- `topogenesis.world.world3d`
-- `topogenesis.world.physics`
-- `topogenesis.world.resources`
-- `topogenesis.world.hazards`
-- `topogenesis.world.sigma_field`
+- stable engine base: integrated reference world in `topogenesis.engine`
+- RPG branch: offline world/population simulator in `topogenesis.world`
 
 ## 2. Body Layer
 

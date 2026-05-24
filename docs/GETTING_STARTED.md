@@ -12,21 +12,15 @@ python -m pip install -e .
 
 python -m unittest discover -s tests -p "test_*.py"
 python -m experiments.run --experiment smoke
-python -m topogenesis.world.offline_sim --days 3 --population 200
 ```
 
 The `smoke` preset is the right first run. It verifies that the reference engine
 starts, steps, emits summaries, and exits without exceptions.
 
-The offline command verifies the scalable background simulator. It is much
-lighter than the integrated reference engine and is intended for 100-300+ NPC
-population pressure runs. The default offline landscape includes multiple
-settlements, food sources with stock/regrowth, water/material sites, and several
-hazard biomes.
-
 The `main` branch does not include the Godot RPG layer. Game-facing work lives
-on the `game-rpg` branch, while more speculative cognition and AGI-oriented work
-lives on `agi-research`. See `docs/BRANCHES.md` for the branch map.
+on the `game-rpg` branch, including the offline population/world simulator.
+More speculative cognition and AGI-oriented work lives on `agi-research`. See
+`docs/BRANCHES.md` for the branch map.
 
 ## 2. Try More Interesting Presets
 

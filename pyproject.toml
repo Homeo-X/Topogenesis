@@ -12,7 +12,6 @@ dependencies = [
 
 [project.scripts]
 topogenesis = "experiments.run:main"
-topogenesis-offline = "topogenesis.world.offline_sim:main"
 
 [tool.setuptools.packages.find]
 include = ["topogenesis*", "experiments*"]
