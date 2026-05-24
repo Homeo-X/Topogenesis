@@ -18,14 +18,14 @@ class PopulationConfig:
     active_fraction: float = 0.15
     active_update_interval: int = 1
     background_update_interval: int = 8
-    movement_rate: float = 0.18
-    energy_decay: float = 0.0015
-    water_decay: float = 0.0008
+    movement_rate: float = 0.28
+    energy_decay: float = 0.00055
+    water_decay: float = 0.00035
     social_decay: float = 0.002
     reproduction_min_age_days: float = 18.0 * 365.0
-    reproduction_energy: float = 0.82
-    reproduction_bond: float = 0.62
-    reproduction_probability: float = 0.002
+    reproduction_energy: float = 0.78
+    reproduction_bond: float = 0.58
+    reproduction_probability: float = 0.00004
     old_age_days: float = 72.0 * 365.0
 
 
@@ -177,6 +177,11 @@ class PopulationManager:
             batch.hydration[alive] - cfg.water_decay + 0.014 * water[alive] + water_gain[alive],
             0.0, 1.0,
         )
+        home_reserve = np.clip(0.00045 * world.stock_fraction("food"), 0.0, 0.00045)
+        water_reserve = np.clip(0.00030 * world.stock_fraction("water"), 0.0, 0.00030)
+        reserve_mask = alive & (batch.environmental_safety > 0.55)
+        batch.energy[reserve_mask] = np.clip(batch.energy[reserve_mask] + home_reserve, 0.0, 1.0)
+        batch.hydration[reserve_mask] = np.clip(batch.hydration[reserve_mask] + water_reserve, 0.0, 1.0)
         batch.repair_material[alive] = np.clip(
             batch.repair_material[alive] + 0.010 * materials[alive] + material_gain[alive],
             0.0, 1.0,
@@ -236,17 +241,25 @@ class PopulationManager:
         material_idx = world.nearest_location_index(np.zeros(2, dtype=np.float32), "materials")
         social_idx = world.nearest_location_index(np.zeros(2, dtype=np.float32), "social")
         home_idx = world.nearest_location_index(np.zeros(2, dtype=np.float32), "home")
+        hunger_pressure = 1.0 - batch.energy
+        thirst_pressure = 1.0 - batch.hydration
         hungry = batch.energy < 0.70
         thirsty = batch.hydration < 0.68
+        critical_hunger = batch.energy < 0.28
+        critical_thirst = batch.hydration < 0.38
         damaged = (batch.bodily_integrity < 0.72) | (batch.repair_material < 0.25)
         unsafe = batch.environmental_safety < 0.45
         isolated = batch.social_stability < 0.42
-        for idx in np.flatnonzero(hungry):
+        water_priority = thirsty & (critical_thirst | (thirst_pressure > hunger_pressure + 0.08))
+        food_priority = hungry & ~water_priority
+        food_priority = food_priority | (critical_hunger & ~critical_thirst)
+        for idx in np.flatnonzero(food_priority):
             batch.target_location[idx] = world.best_resource_location_index(batch.position[idx], "food")
-        for idx in np.flatnonzero(thirsty & ~hungry):
+        for idx in np.flatnonzero(water_priority):
             batch.target_location[idx] = world.best_resource_location_index(batch.position[idx], "water")
-        batch.target_location = np.where(damaged & ~(hungry | thirsty), material_idx, batch.target_location)
-        batch.target_location = np.where(isolated & ~(hungry | thirsty | damaged), social_idx, batch.target_location)
+        urgent_viability = food_priority | water_priority
+        batch.target_location = np.where(damaged & ~urgent_viability, material_idx, batch.target_location)
+        batch.target_location = np.where(isolated & ~(urgent_viability | damaged), social_idx, batch.target_location)
         batch.target_location = np.where(unsafe, home_idx, batch.target_location)
         calm = (need_total < 0.22) & (self.rng.random(batch.size) < 0.02)
         batch.target_location = np.where(calm, batch.home_location, batch.target_location)
