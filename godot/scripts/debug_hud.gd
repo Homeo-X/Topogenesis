@@ -2,11 +2,13 @@ extends CanvasLayer
 
 var info_label: Label
 var objective_label: Label
+var world_label: Label
 var dialogue_label: Label
 var prompt_label: Label
+var controls_label: Label
 var focus_panel: ColorRect
 var focus_label: Label
-var debug_visible := true
+var debug_visible := false
 var dialogue_timer := 0.0
 
 const MAX_DEBUG_NPCS := 6
@@ -16,45 +18,62 @@ func _ready() -> void:
 	var top_shadow := ColorRect.new()
 	top_shadow.color = Color(0.03, 0.025, 0.02, 0.42)
 	top_shadow.position = Vector2(0, 0)
-	top_shadow.size = Vector2(1280, 108)
+	top_shadow.size = Vector2(1280, 84)
 	add_child(top_shadow)
 
 	objective_label = Label.new()
 	objective_label.position = Vector2(16, 12)
-	objective_label.size = Vector2(1000, 64)
+	objective_label.size = Vector2(760, 58)
 	objective_label.add_theme_font_size_override("font_size", 18)
 	add_child(objective_label)
 
+	world_label = Label.new()
+	world_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	world_label.position = Vector2(782, 14)
+	world_label.size = Vector2(470, 52)
+	world_label.add_theme_font_size_override("font_size", 14)
+	world_label.modulate = Color(0.88, 0.86, 0.76)
+	add_child(world_label)
+
 	info_label = Label.new()
-	info_label.position = Vector2(16, 78)
-	info_label.size = Vector2(640, 152)
-	info_label.add_theme_font_size_override("font_size", 13)
+	info_label.position = Vector2(16, 94)
+	info_label.size = Vector2(560, 132)
+	info_label.add_theme_font_size_override("font_size", 12)
+	info_label.visible = false
 	add_child(info_label)
 
 	dialogue_label = Label.new()
-	dialogue_label.position = Vector2(16, 604)
-	dialogue_label.size = Vector2(1100, 80)
-	dialogue_label.add_theme_font_size_override("font_size", 20)
-	dialogue_label.text = "Left click move | WASD move | Right-drag rotate | Wheel zoom | E interact | F1 debug"
+	dialogue_label.position = Vector2(16, 548)
+	dialogue_label.size = Vector2(850, 48)
+	dialogue_label.add_theme_font_size_override("font_size", 19)
+	dialogue_label.text = ""
 	add_child(dialogue_label)
 
 	prompt_label = Label.new()
-	prompt_label.position = Vector2(16, 560)
-	prompt_label.size = Vector2(900, 40)
+	prompt_label.position = Vector2(16, 500)
+	prompt_label.size = Vector2(760, 36)
 	prompt_label.add_theme_font_size_override("font_size", 18)
 	add_child(prompt_label)
 
+	controls_label = Label.new()
+	controls_label.position = Vector2(16, 622)
+	controls_label.size = Vector2(1040, 32)
+	controls_label.add_theme_font_size_override("font_size", 15)
+	controls_label.modulate = Color(0.90, 0.88, 0.78)
+	controls_label.text = "LMB move    WASD move    RMB rotate    Wheel zoom    E interact    F1 diagnostics"
+	add_child(controls_label)
+
 	focus_panel = ColorRect.new()
-	focus_panel.color = Color(0.03, 0.025, 0.02, 0.68)
-	focus_panel.position = Vector2(912, 112)
-	focus_panel.size = Vector2(340, 188)
+	focus_panel.color = Color(0.025, 0.022, 0.018, 0.78)
+	focus_panel.position = Vector2(890, 100)
+	focus_panel.size = Vector2(362, 214)
 	focus_panel.visible = false
 	add_child(focus_panel)
 
 	focus_label = Label.new()
-	focus_label.position = Vector2(930, 126)
-	focus_label.size = Vector2(304, 160)
-	focus_label.add_theme_font_size_override("font_size", 17)
+	focus_label.position = Vector2(910, 116)
+	focus_label.size = Vector2(322, 182)
+	focus_label.add_theme_font_size_override("font_size", 16)
 	focus_label.visible = false
 	add_child(focus_label)
 
@@ -64,14 +83,14 @@ func _process(delta: float) -> void:
 	if Input.is_action_just_pressed("toggle_debug"):
 		debug_visible = not debug_visible
 		info_label.visible = debug_visible
-	if dialogue_timer <= 0.0 and not dialogue_label.text.begins_with("Left click"):
-		dialogue_label.text = "Left click move | WASD move | Right-drag rotate | Wheel zoom | E interact | F1 debug"
+	if dialogue_timer <= 0.0:
+		dialogue_label.text = ""
 
-	objective_label.text = "%s\n%s\n%s" % [
+	objective_label.text = "%s\n%s" % [
 		GameDirector.objective_text(),
 		GameDirector.status_text(),
-		TopogenesisBridge.backend_status(),
 	]
+	world_label.text = _world_status_text()
 	var lines: Array[String] = ["Topogenesis RPG Vertical Slice"]
 	var snapshot := TopogenesisBridge.current_world_snapshot()
 	if not snapshot.is_empty():
@@ -115,6 +134,23 @@ func _compact_debug_summary(summary: String) -> String:
 	return "%s | %s | %s" % [name, need, affect]
 
 
+func _world_status_text() -> String:
+	var bridge := "Live cognition" if TopogenesisBridge.backend_status().find("online") >= 0 else "Local fallback"
+	var snapshot := TopogenesisBridge.current_world_snapshot()
+	if snapshot.is_empty():
+		return "%s\nF1 diagnostics" % bridge
+	var clock: Dictionary = snapshot.get("clock", {})
+	var world: Dictionary = snapshot.get("world", {})
+	var summary: Dictionary = snapshot.get("summary", {})
+	return "%s\nDay %s   Pop %s   Food %.0f%%   Water %.0f%%" % [
+		bridge,
+		str(clock.get("day", 0)),
+		str(summary.get("population_final", "?")),
+		100.0 * float(world.get("food_stock", 1.0)),
+		100.0 * float(world.get("water_stock", 1.0)),
+	]
+
+
 func set_focus_state(npc_name: String, state: Dictionary) -> void:
 	var need := str(state.get("dominant_need", "unknown"))
 	var need_total := float(state.get("need_total", 0.0))
@@ -126,7 +162,7 @@ func set_focus_state(npc_name: String, state: Dictionary) -> void:
 	var memory_text := "none"
 	if not memory_events.is_empty() and typeof(memory_events[-1]) == TYPE_DICTIONARY:
 		memory_text = str(memory_events[-1].get("claim", "recent pressure"))
-	focus_label.text = "%s\nCalling: %s\nNeed: %s %.2f\nAffect stability: %.2f\nIntention: %s\nTrust: %.2f\nRecent memory: %s" % [
+	focus_label.text = "%s\n%s\n\nNeed        %s %.2f\nStability   %.2f\nIntention   %s\nTrust       %.2f\nMemory      %s" % [
 		npc_name,
 		calling,
 		need,
