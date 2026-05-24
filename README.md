@@ -4,8 +4,9 @@ Topogenesis is a standalone embodied artificial-life platform for modular,
 measurable ecosystem simulation.
 
 This `main` branch is the stable neutral base. It keeps the core Python engine,
-experiments, tests, and documentation without the game-specific Godot layer or
-offline RPG population simulator. See [docs/BRANCHES.md](docs/BRANCHES.md) for how `main`,
+experiments, tests, and documentation without the game-specific Godot layer,
+offline RPG population simulator, or standalone NPC layer. See
+[docs/BRANCHES.md](docs/BRANCHES.md) for how `main`,
 `game-rpg`, and `agi-research` are separated.
 
 Its thesis is pressure-driven cognition: needs, affect, communication, memory,
@@ -30,15 +31,9 @@ ablatable, and measurable.
 
 ## Platform Focus
 
-The `topogenesis.npc` package contains cognition primitives for pressure-driven
-agents:
-
-- affect as a continuous internal pressure field
-- needs emerging from viability deficits
-- episodic and semantic memory
-- compact models of other minds
-- communication intents as belief interventions
-- hierarchical future simulation with cognitive cost
+The stable base keeps pressure-cognition compatibility inside
+`topogenesis/engine.py`. The standalone `topogenesis.npc` package now belongs to
+`game-rpg`, where it supports villager cognition and bridge behavior.
 
 The offline population/world simulator has moved out of `main`. It now belongs
 to `game-rpg`, where it supports the playable village and bridge layer.

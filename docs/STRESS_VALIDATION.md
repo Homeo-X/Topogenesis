@@ -5,15 +5,17 @@ manual terminal runs.
 
 ## Current Stress Coverage
 
-- `tests/test_stress_validation.py::test_npc_cognition_survives_repeated_updates`
-  runs 5,000 affect, need, communication, memory, belief, and future-simulation
-  updates while checking finite bounded state and bounded memory.
-- `tests/test_stress_validation.py::test_sigma_field_jit_stress_remains_finite_and_normalized`
+- `tests/test_jit_runtime.py` verifies the JIT-oriented field kernel remains
+  finite under compiled execution.
+- Historical game-facing NPC stress coverage now lives on the `game-rpg` branch
+  with the standalone `topogenesis.npc` layer.
+- The integrated engine smoke run still exercises internal pressure-cognition
+  compatibility paths because the reference agent loop updates affect-like
+  pressure, need pressure, communication intent, future simulation, and motor
+  gating each step.
+- Previous stress checks included a sigma-field PDE soak that
   runs 256 sigma-field PDE steps with edge-clipped positions and high energies,
   then checks finite field values and near-unit normalization.
-- The engine smoke run now also exercises the NPC cognition bridge because the
-  reference agent loop updates NPC affect, need pressure, social memory,
-  communication intent, future simulation, and motor gating each step.
 
 ## Manual Validation Run
 

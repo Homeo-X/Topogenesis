@@ -13,8 +13,8 @@ Stable neutral base.
 
 `main` should stay runnable, compact, and conservative. It should not contain
 Godot game assets, branch-specific launchers, the offline RPG population/world
-simulator, or speculative research-only interfaces unless they have become
-stable enough to serve the whole project.
+simulator, the standalone NPC layer, or speculative research-only interfaces
+unless they have become stable enough to serve the whole project.
 
 ## `game-rpg`
 
@@ -25,6 +25,7 @@ Playable RPG branch.
 - visual assets
 - game bridge and launch scripts
 - offline population/world simulator
+- standalone `topogenesis.npc` villager cognition layer
 - RPG-facing UX, camera, movement, world, and villager presentation
 
 Game features should land here first. Stable engine improvements can later be

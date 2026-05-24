@@ -18,9 +18,9 @@ The `smoke` preset is the right first run. It verifies that the reference engine
 starts, steps, emits summaries, and exits without exceptions.
 
 The `main` branch does not include the Godot RPG layer. Game-facing work lives
-on the `game-rpg` branch, including the offline population/world simulator.
-More speculative cognition and AGI-oriented work lives on `agi-research`. See
-`docs/BRANCHES.md` for the branch map.
+on the `game-rpg` branch, including the offline population/world simulator and
+standalone NPC layer. More speculative cognition and AGI-oriented work lives on
+`agi-research`. See `docs/BRANCHES.md` for the branch map.
 
 ## 2. Try More Interesting Presets
 
