@@ -33,8 +33,8 @@ function Start-GodotProject {
     $startInfo.FileName = $ExecutablePath
     $startInfo.WorkingDirectory = $WorkingDirectory
     $startInfo.UseShellExecute = $false
-    [void]$startInfo.ArgumentList.Add("--path")
-    [void]$startInfo.ArgumentList.Add($ProjectPath)
+    $escapedProjectPath = $ProjectPath.Replace('"', '\"')
+    $startInfo.Arguments = "--path `"$escapedProjectPath`""
 
     $process = [System.Diagnostics.Process]::Start($startInfo)
     if ($null -eq $process) {
