@@ -13,6 +13,9 @@ const CHARACTER_ASSET_ROOT := "res://assets/quaternius/animated_characters/Ultim
 const WORLD_HALF_EXTENT := 118.0
 const RESOURCE_CENTER := Vector3(-28.0, 0.0, -22.0)
 const HAZARD_CENTER := Vector3(31.0, 0.0, -26.0)
+const NPC_COLLISION_LAYER := 2
+const WORLD_COLLISION_MASK := 1
+const LABEL_VISIBLE_DISTANCE := 12.0
 
 var wander_angle := 0.0
 var retarget_timer := 0.0
@@ -30,6 +33,8 @@ var snapshot_state: Dictionary = {}
 
 func _ready() -> void:
 	add_to_group("npc")
+	collision_layer = NPC_COLLISION_LAYER
+	collision_mask = WORLD_COLLISION_MASK
 	TopogenesisBridge.register_npc(npc_id, display_name)
 	current_target = home_position
 	_build_navigation_agent()
@@ -55,6 +60,7 @@ func _physics_process(delta: float) -> void:
 			"player_threat": 1.0 if distance_to_player < 1.8 and Input.is_action_pressed("sprint") else 0.0,
 		})
 	_update_visual_state()
+	_update_label_visibility(distance_to_player)
 
 	if not snapshot_controlled:
 		retarget_timer -= delta
@@ -123,7 +129,8 @@ func apply_offline_snapshot(data: Dictionary, scale: float) -> void:
 	name = display_name
 	var pos = data.get("position", [])
 	if typeof(pos) == TYPE_ARRAY and pos.size() >= 2:
-		snapshot_target_position = Vector3(float(pos[0]) * scale, 0.2, float(pos[1]) * scale)
+		var base_position := Vector3(float(pos[0]) * scale, 0.2, float(pos[1]) * scale)
+		snapshot_target_position = _bounded_world(base_position + _snapshot_crowd_offset(data))
 		home_position = snapshot_target_position
 	snapshot_state = {
 		"display_name": display_name,
@@ -142,6 +149,15 @@ func apply_offline_snapshot(data: Dictionary, scale: float) -> void:
 		"threat_salience": clampf(1.0 - float(data.get("environmental_safety", 0.76)), 0.0, 1.0),
 		"memory_events": [],
 	}
+
+
+func _snapshot_crowd_offset(data: Dictionary) -> Vector3:
+	var raw_id := int(data.get("id", absi(hash(npc_id))))
+	var slot := raw_id % 37
+	var ring := floorf(sqrt(float(slot)))
+	var angle := float(raw_id % 360) * 2.399963
+	var radius := 0.45 + ring * 0.72
+	return Vector3(cos(angle) * radius, 0.0, sin(angle) * radius)
 
 
 func _build_navigation_agent() -> void:
@@ -451,3 +467,8 @@ func _update_visual_state() -> void:
 	mat.roughness = 0.7
 	pressure_ring.material_override = mat
 	pressure_ring.scale = Vector3.ONE * lerpf(0.85, 1.25, 1.0 - affect)
+
+
+func _update_label_visibility(distance_to_player: float) -> void:
+	if overhead_label != null:
+		overhead_label.visible = distance_to_player <= LABEL_VISIBLE_DISTANCE
