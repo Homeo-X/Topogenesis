@@ -9,6 +9,8 @@ var focus_label: Label
 var debug_visible := true
 var dialogue_timer := 0.0
 
+const MAX_DEBUG_NPCS := 6
+
 
 func _ready() -> void:
 	var top_shadow := ColorRect.new()
@@ -25,8 +27,8 @@ func _ready() -> void:
 
 	info_label = Label.new()
 	info_label.position = Vector2(16, 78)
-	info_label.size = Vector2(760, 260)
-	info_label.add_theme_font_size_override("font_size", 16)
+	info_label.size = Vector2(640, 152)
+	info_label.add_theme_font_size_override("font_size", 13)
 	add_child(info_label)
 
 	dialogue_label = Label.new()
@@ -82,9 +84,15 @@ func _process(delta: float) -> void:
 			100.0 * float(world.get("food_stock", 1.0)),
 			100.0 * float(world.get("water_stock", 1.0)),
 		])
+	var npc_count := 0
 	for npc in get_tree().get_nodes_in_group("npc"):
+		npc_count += 1
+		if lines.size() >= MAX_DEBUG_NPCS + 2:
+			continue
 		if npc.has_method("debug_summary"):
-			lines.append(npc.debug_summary())
+			lines.append(_compact_debug_summary(npc.debug_summary()))
+	if npc_count > MAX_DEBUG_NPCS:
+		lines.append("... %d more villagers | focus one for details" % [npc_count - MAX_DEBUG_NPCS])
 	info_label.text = "\n".join(lines)
 
 
@@ -95,6 +103,16 @@ func show_dialogue(text: String) -> void:
 
 func set_prompt(text: String) -> void:
 	prompt_label.text = text
+
+
+func _compact_debug_summary(summary: String) -> String:
+	var parts := summary.split(" | ")
+	if parts.size() < 4:
+		return summary
+	var name := parts[0]
+	var need := parts[1].replace("need:", "")
+	var affect := parts[2].replace("affect:", "aff:")
+	return "%s | %s | %s" % [name, need, affect]
 
 
 func set_focus_state(npc_name: String, state: Dictionary) -> void:
