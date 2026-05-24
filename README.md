@@ -5,8 +5,8 @@ measurable ecosystem simulation.
 
 This `main` branch is the stable neutral base. It keeps the core Python engine,
 experiments, tests, offline ecology, and documentation without the game-specific
-Godot layer. The `game-rpg` branch carries the playable RPG prototype, while
-`agi-research` carries more speculative cognition and AGI-oriented work.
+Godot layer. See [docs/BRANCHES.md](docs/BRANCHES.md) for how `main`,
+`game-rpg`, and `agi-research` are separated.
 
 Its thesis is pressure-driven cognition: needs, affect, communication, memory,
 future simulation, and action are coupled to viability pressure rather than
@@ -99,9 +99,9 @@ GitHub Actions runs unit tests with `JAX_DISABLE_JIT=0`, a short smoke
 experiment, and a weekly/manual extended JIT smoke run. The manual workflow
 defaults to 2,000 steps for longer stability checks without slowing every push.
 
-## Public Research Status
+## Stability Status
 
-The current release prioritizes transparency over polish:
+The current base prioritizes transparency and repeatability:
 
 - core mechanisms are heuristic and under active hardening
 - `topogenesis/engine.py` still contains the integrated reference engine

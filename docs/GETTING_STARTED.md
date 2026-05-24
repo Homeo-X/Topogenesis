@@ -26,8 +26,7 @@ hazard biomes.
 
 The `main` branch does not include the Godot RPG layer. Game-facing work lives
 on the `game-rpg` branch, while more speculative cognition and AGI-oriented work
-lives on `agi-research`. This branch is the neutral stable base for the engine,
-experiments, metrics, and ablations.
+lives on `agi-research`. See `docs/BRANCHES.md` for the branch map.
 
 ## 2. Try More Interesting Presets
 
