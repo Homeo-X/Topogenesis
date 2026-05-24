@@ -27,6 +27,10 @@ func _ready() -> void:
 	add_child(world_request)
 
 
+func _process(delta: float) -> void:
+	_poll_backend(delta)
+
+
 func register_npc(npc_id: String, display_name: String) -> void:
 	if npc_states.has(npc_id):
 		return
@@ -102,7 +106,6 @@ func step_npc(npc_id: String, delta: float, world_pressure: Dictionary) -> Dicti
 		1.0
 	)
 	state.future_action = _choose_future_action(metabolic, epistemic, safety, state.trust_player)
-	_poll_backend(delta)
 	return state
 
 
