@@ -100,6 +100,7 @@ func set_prompt(text: String) -> void:
 func set_focus_state(npc_name: String, state: Dictionary) -> void:
 	var need := str(state.get("dominant_need", "unknown"))
 	var need_total := float(state.get("need_total", 0.0))
+	var calling := str(state.get("calling", "villager"))
 	var affect := float(state.get("affect_stability", 0.0))
 	var future := str(state.get("future_action", "observe"))
 	var trust := float(state.get("trust_player", 0.5))
@@ -107,8 +108,9 @@ func set_focus_state(npc_name: String, state: Dictionary) -> void:
 	var memory_text := "none"
 	if not memory_events.is_empty() and typeof(memory_events[-1]) == TYPE_DICTIONARY:
 		memory_text = str(memory_events[-1].get("claim", "recent pressure"))
-	focus_label.text = "%s\nNeed: %s %.2f\nAffect stability: %.2f\nIntention: %s\nTrust: %.2f\nRecent memory: %s" % [
+	focus_label.text = "%s\nCalling: %s\nNeed: %s %.2f\nAffect stability: %.2f\nIntention: %s\nTrust: %.2f\nRecent memory: %s" % [
 		npc_name,
+		calling,
 		need,
 		need_total,
 		affect,

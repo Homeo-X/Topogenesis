@@ -648,14 +648,14 @@ func _spawn_player() -> void:
 func _spawn_npcs() -> void:
 	var script := load("res://scripts/npc_controller.gd")
 	var data := [
-		["npc_mara", "Mara", Vector3(-2.0, 0.2, 1.0)],
-		["npc_ovan", "Ovan", Vector3(4.0, 0.2, 2.0)],
-		["npc_sera", "Sera", Vector3(-6.0, 0.2, -4.0)],
-		["npc_eldric", "Eldric", Vector3(-17.0, 0.2, 9.5)],
-		["npc_talia", "Talia", Vector3(16.0, 0.2, -9.5)],
-		["npc_bren", "Bren", Vector3(22.0, 0.2, 3.0)],
-		["npc_lysa", "Lysa", Vector3(-24.5, 0.2, 2.0)],
-		["npc_rowan", "Rowan", Vector3(17.5, 0.2, 16.0)],
+		["npc_maera", "Maera Ashbourne", Vector3(-2.0, 0.2, 1.0)],
+		["npc_jorin", "Jorin Blackfen", Vector3(4.0, 0.2, 2.0)],
+		["npc_cerys", "Cerys Briarholt", Vector3(-6.0, 0.2, -4.0)],
+		["npc_aelric", "Aelric Stonewell", Vector3(-17.0, 0.2, 9.5)],
+		["npc_tavia", "Tavia Reedwatch", Vector3(16.0, 0.2, -9.5)],
+		["npc_garric", "Garric Ironvale", Vector3(22.0, 0.2, 3.0)],
+		["npc_lysa", "Lysa Mosswick", Vector3(-24.5, 0.2, 2.0)],
+		["npc_rowan", "Rowan Thornhollow", Vector3(17.5, 0.2, 16.0)],
 	]
 	for row in data:
 		var npc := CharacterBody3D.new()

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Optional
 
 from .metrics import OfflineMetrics, OfflineSummary
+from .names import villager_calling, villager_display_name
 from .population import NPCBatch, PopulationConfig, PopulationManager
 from .world_state import WorldState
 
@@ -89,11 +90,15 @@ class OfflineSimulator:
         npcs = []
         for idx in alive_idx:
             viability, needs = self.population_manager.sample_viability(self.population, idx)
+            npc_id = int(self.population.ids[idx])
+            lineage = int(self.population.lineage[idx])
+            generation = int(self.population.generation[idx])
             npcs.append({
-                "id": int(self.population.ids[idx]),
-                "display_name": f"Villager {int(self.population.ids[idx])}",
-                "lineage": int(self.population.lineage[idx]),
-                "generation": int(self.population.generation[idx]),
+                "id": npc_id,
+                "display_name": villager_display_name(npc_id, lineage, generation),
+                "calling": villager_calling(npc_id, lineage, generation),
+                "lineage": lineage,
+                "generation": generation,
                 "age_days": round(float(self.population.age_days[idx]), 4),
                 "position": _round_vec2(self.population.position[idx]),
                 "target_location": int(self.population.target_location[idx]),
