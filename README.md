@@ -40,6 +40,10 @@ multiple hamlets, farms, orchards, hunting grounds, water sources, material
 sites, and distinct hazard biomes whose effects separate danger, bodily damage,
 and prediction disruption.
 
+The Godot bridge exposes the same offline region through `/world_snapshot`.
+When the Python bridge is running, Godot NPC pressure reads use that shared
+food/hazard landscape instead of the older local-only pressure centers.
+
 ## North Star
 
 Topogenesis should become a self-maintaining artificial-life laboratory where agents

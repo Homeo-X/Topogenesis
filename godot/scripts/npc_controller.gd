@@ -187,14 +187,47 @@ func _bounded_world(pos: Vector3) -> Vector3:
 
 
 func _hazard_pressure() -> float:
+	var snapshot := TopogenesisBridge.current_world_snapshot()
+	var locations = snapshot.get("locations", [])
+	if typeof(locations) == TYPE_ARRAY:
+		var hazard := _location_pressure(locations, ["hazard"], "danger")
+		if hazard >= 0.0:
+			return hazard
 	return clampf(1.0 - global_position.distance_to(HAZARD_CENTER) / 24.0, 0.0, 1.0)
 
 
 func _resource_pressure() -> float:
+	var snapshot := TopogenesisBridge.current_world_snapshot()
+	var locations = snapshot.get("locations", [])
+	if typeof(locations) == TYPE_ARRAY:
+		var food := _location_pressure(locations, ["food", "water", "materials"], "resource_rate")
+		if food >= 0.0:
+			return food
 	var farm_center := Vector3(22.0, 0.0, 23.0)
 	var grove_pressure := clampf(1.0 - global_position.distance_to(RESOURCE_CENTER) / 18.0, 0.0, 1.0)
 	var farm_pressure := clampf(1.0 - global_position.distance_to(farm_center) / 16.0, 0.0, 1.0)
 	return maxf(grove_pressure, farm_pressure)
+
+
+func _location_pressure(locations: Array, kinds: Array[String], value_key: String) -> float:
+	var best := -1.0
+	for loc in locations:
+		if typeof(loc) != TYPE_DICTIONARY:
+			continue
+		if not kinds.has(str(loc.get("kind", ""))):
+			continue
+		var pos = loc.get("position", [])
+		if typeof(pos) != TYPE_ARRAY or pos.size() < 2:
+			continue
+		var loc_pos := Vector3(float(pos[0]), 0.0, float(pos[1]))
+		var radius := maxf(0.1, float(loc.get("radius", 1.0)))
+		var base := float(loc.get(value_key, 0.0))
+		var stock := 1.0
+		if loc.has("capacity") and float(loc.get("capacity", 0.0)) > 0.0:
+			stock = clampf(float(loc.get("stock", 0.0)) / float(loc.get("capacity", 1.0)), 0.0, 1.0)
+		var pressure := clampf(1.0 - global_position.distance_to(loc_pos) / radius, 0.0, 1.0) * base * stock
+		best = maxf(best, pressure)
+	return clampf(best / 3.0, 0.0, 1.0) if value_key == "resource_rate" else clampf(best, 0.0, 1.0)
 
 
 func _build_body() -> void:

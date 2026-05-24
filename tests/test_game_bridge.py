@@ -32,6 +32,10 @@ class GameBridgeTests(unittest.TestCase):
             "metabolic", "repair", "mnemonic", "epistemic",
             "social", "attachment", "safety",
         })
+        world = state.world_snapshot()
+        self.assertIn("locations", world)
+        self.assertIn("npcs", world)
+        self.assertGreaterEqual(world["world"]["carrying_capacity"], 800)
 
     def test_bridge_http_step_endpoint(self):
         class TestHandler(BridgeHandler):
@@ -58,6 +62,28 @@ class GameBridgeTests(unittest.TestCase):
 
             self.assertEqual(response.status, 200)
             self.assertIn("npc_ovan", payload["npcs"])
+        finally:
+            server.shutdown()
+            server.server_close()
+
+    def test_bridge_http_world_snapshot_endpoint(self):
+        class TestHandler(BridgeHandler):
+            state = GameBridgeState()
+
+        server = ThreadingHTTPServer(("127.0.0.1", 0), TestHandler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            conn = HTTPConnection("127.0.0.1", server.server_port, timeout=5)
+            conn.request("GET", "/world_snapshot")
+            response = conn.getresponse()
+            payload = json.loads(response.read().decode("utf-8"))
+            conn.close()
+
+            self.assertEqual(response.status, 200)
+            self.assertEqual(payload["mode"], "offline_world")
+            self.assertGreater(len(payload["locations"]), 10)
+            self.assertGreater(len(payload["npcs"]), 0)
         finally:
             server.shutdown()
             server.server_close()

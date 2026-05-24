@@ -2,14 +2,18 @@ extends Node
 
 const MAX_MEMORY_EVENTS := 128
 const BACKEND_URL := "http://127.0.0.1:8765/step"
+const WORLD_SNAPSHOT_URL := "http://127.0.0.1:8765/world_snapshot"
 
 var npc_states: Dictionary = {}
 var npc_pressures: Dictionary = {}
+var world_snapshot: Dictionary = {}
 var backend_online := false
 var backend_pending := false
 var backend_tick := 0
 var http_request: HTTPRequest
+var world_request: HTTPRequest
 var poll_timer := 0.0
+var world_poll_timer := 0.0
 
 
 func _ready() -> void:
@@ -17,6 +21,10 @@ func _ready() -> void:
 	http_request.timeout = 0.35
 	http_request.request_completed.connect(_on_backend_response)
 	add_child(http_request)
+	world_request = HTTPRequest.new()
+	world_request.timeout = 0.5
+	world_request.request_completed.connect(_on_world_snapshot_response)
+	add_child(world_request)
 
 
 func register_npc(npc_id: String, display_name: String) -> void:
@@ -148,10 +156,25 @@ func backend_status() -> String:
 	return "Python bridge: online tick %d" % backend_tick if backend_online else "Python bridge: local fallback"
 
 
+func current_world_snapshot() -> Dictionary:
+	return world_snapshot.duplicate(true)
+
+
 func _poll_backend(delta: float) -> void:
 	if http_request == null or backend_pending:
 		return
 	poll_timer -= delta
+	world_poll_timer -= delta
+	if world_request != null and world_poll_timer <= 0.0:
+		world_poll_timer = 2.0
+		var status := world_request.get_http_client_status()
+		if status not in [
+			HTTPClient.STATUS_RESOLVING,
+			HTTPClient.STATUS_CONNECTING,
+			HTTPClient.STATUS_REQUESTING,
+			HTTPClient.STATUS_BODY,
+		]:
+			world_request.request(WORLD_SNAPSHOT_URL)
 	if poll_timer > 0.0:
 		return
 	poll_timer = 0.25
@@ -186,6 +209,14 @@ func _on_backend_response(_result: int, response_code: int, _headers: PackedStri
 		import_snapshot(npcs)
 	backend_tick = int(parsed.get("tick", backend_tick))
 	backend_online = true
+
+
+func _on_world_snapshot_response(_result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	if response_code != 200:
+		return
+	var parsed = JSON.parse_string(body.get_string_from_utf8())
+	if typeof(parsed) == TYPE_DICTIONARY:
+		world_snapshot = parsed
 
 
 func _dominant_need(values: Dictionary) -> String:

@@ -13,6 +13,7 @@ from topogenesis.npc import (
     interpret_intent,
     simulate_future,
 )
+from topogenesis.world import OfflineConfig, OfflineSimulator, PopulationConfig, PopulationManager, WorldState
 
 
 def _clamp(value: Any, low: float = 0.0, high: float = 1.0, default: float = 0.0) -> float:
@@ -150,6 +151,14 @@ class BridgeNpc:
 class GameBridgeState:
     npcs: dict[str, BridgeNpc] = field(default_factory=dict)
     tick: int = 0
+    offline: OfflineSimulator = field(default_factory=lambda: OfflineSimulator(
+        world=WorldState.default(ticks_per_day=60, seed=11),
+        population_manager=PopulationManager(
+            PopulationConfig(initial_population=300, max_population=800),
+            seed=11,
+        ),
+        config=OfflineConfig(ticks_per_day=60, metrics_interval=60, seed=11),
+    ))
 
     def register_npc(self, npc_id: str, display_name: str | None = None) -> None:
         npc_id = str(npc_id).strip()
@@ -175,8 +184,12 @@ class GameBridgeState:
                 delta,
                 pressure if isinstance(pressure, dict) else {},
             )
+        self.offline.run_ticks(1)
         self.tick += 1
         return self.snapshot()
+
+    def world_snapshot(self, visible_limit: int = 96) -> dict[str, Any]:
+        return self.offline.snapshot(visible_limit=visible_limit)
 
     def snapshot(self) -> dict[str, Any]:
         return {
