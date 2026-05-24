@@ -317,6 +317,60 @@ class GameBridgeState:
             }
         return snapshot
 
+    def director_snapshot(self) -> dict[str, Any]:
+        """Return game-facing signals for objectives, UI, and encounter pacing."""
+        world = self.world_snapshot(visible_limit=24)
+        npcs = world.get("npcs", [])
+        world_meta = world.get("world", {})
+        living_count = int(world_meta.get("population", len(npcs)) or 0)
+        average_affect = _clamp(world_meta.get("average_affect", 0.5), default=0.5)
+        food_ratio = _clamp(world_meta.get("food_ratio", 0.5), default=0.5)
+        water_ratio = _clamp(world_meta.get("water_ratio", 0.5), default=0.5)
+
+        need_counts: dict[str, int] = {}
+        for npc in npcs:
+            need = str(npc.get("dominant_need", "unknown"))
+            need_counts[need] = need_counts.get(need, 0) + 1
+        dominant_need = max(need_counts, key=need_counts.get) if need_counts else "unknown"
+
+        pressure_score = _clamp(
+            (1.0 - average_affect) * 0.5
+            + (1.0 - food_ratio) * 0.3
+            + (1.0 - water_ratio) * 0.2,
+            default=0.5,
+        )
+        if living_count <= 0:
+            objective = "restore population continuity"
+            tone = "collapse"
+        elif pressure_score > 0.62:
+            objective = f"stabilize {dominant_need} pressure"
+            tone = "crisis"
+        elif pressure_score > 0.38:
+            objective = f"investigate {dominant_need} pressure"
+            tone = "uneasy"
+        else:
+            objective = "strengthen village bonds"
+            tone = "stable"
+
+        return {
+            "version": 1,
+            "tick": self.tick,
+            "tone": tone,
+            "objective": objective,
+            "pressure_score": pressure_score,
+            "dominant_need": dominant_need,
+            "need_counts": need_counts,
+            "population": living_count,
+            "food_ratio": food_ratio,
+            "water_ratio": water_ratio,
+            "average_affect": average_affect,
+            "suggested_ui": {
+                "headline": objective,
+                "subhead": f"Population {living_count} | pressure {pressure_score:.2f}",
+                "focus_need": dominant_need,
+            },
+        }
+
     def snapshot(self) -> dict[str, Any]:
         return {
             "version": 1,

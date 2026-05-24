@@ -27,6 +27,9 @@ When the bridge is running, Godot polls `http://127.0.0.1:8765/step` and imports
 NPC cognition snapshots. If it is not running, the local Godot fallback remains
 playable.
 
+The bridge also exposes `http://127.0.0.1:8765/director_snapshot` for
+game-facing objective, tone, pressure, and UI signals.
+
 ## Controls
 
 - Left mouse click: move to ground position
@@ -67,5 +70,7 @@ or augmenting that local bridge with Python-backed Topogenesis state snapshots.
 
 See `PRODUCTION_NOTES.md` for what is production-shaped now and what remains
 before this could honestly be called AAA-quality.
+
+See `RPG_BRANCH.md` for the RPG branch charter and bridge endpoint map.
 
 See `ASSET_CREDITS.md` for the included CC0 asset packs and license notes.

@@ -100,6 +100,24 @@ class GameBridgeTests(unittest.TestCase):
             server.shutdown()
             server.server_close()
 
+    def test_bridge_director_snapshot_exposes_game_signals(self):
+        state = GameBridgeState()
+        state.step({
+            "delta": 0.1,
+            "pressures": {
+                "npc_ovan": {"hazard": 0.8, "resource": 0.1},
+                "npc_sera": {"hazard": 0.2, "resource": 0.6},
+            },
+        })
+        snapshot = state.director_snapshot()
+
+        self.assertEqual(snapshot["version"], 1)
+        self.assertIn(snapshot["tone"], {"stable", "uneasy", "crisis", "collapse"})
+        self.assertTrue(0.0 <= snapshot["pressure_score"] <= 1.0)
+        self.assertIn("objective", snapshot)
+        self.assertIn("suggested_ui", snapshot)
+        self.assertIn("focus_need", snapshot["suggested_ui"])
+
 
 if __name__ == "__main__":
     unittest.main()

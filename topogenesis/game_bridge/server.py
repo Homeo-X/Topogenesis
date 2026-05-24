@@ -34,6 +34,9 @@ class BridgeHandler(BaseHTTPRequestHandler):
         if self.path.startswith("/world_snapshot"):
             _json_response(self, 200, self.state.world_snapshot())
             return
+        if self.path == "/director_snapshot":
+            _json_response(self, 200, self.state.director_snapshot())
+            return
         _json_response(self, 404, {"error": "unknown endpoint"})
 
     def do_POST(self) -> None:
