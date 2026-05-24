@@ -1,5 +1,5 @@
 param(
-    [string]$GodotPath = "C:\Users\rsijr\Downloads\Godot_v4.6.2-stable_win64.exe\Godot_v4.6.2-stable_win64.exe",
+    [string]$GodotPath = "C:\Users\rsijr\Downloads\Godot_v4.6.2-stable_win64.exe\Godot_v4.6.2-stable_win64_console.exe",
     [string]$HostName = "127.0.0.1",
     [int]$Port = 8765,
     [switch]$NoWait,
@@ -20,6 +20,27 @@ function Test-BridgeReady {
     catch {
         return $false
     }
+}
+
+function Start-GodotProject {
+    param(
+        [string]$ExecutablePath,
+        [string]$ProjectPath,
+        [string]$WorkingDirectory
+    )
+
+    $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+    $startInfo.FileName = $ExecutablePath
+    $startInfo.WorkingDirectory = $WorkingDirectory
+    $startInfo.UseShellExecute = $false
+    [void]$startInfo.ArgumentList.Add("--path")
+    [void]$startInfo.ArgumentList.Add($ProjectPath)
+
+    $process = [System.Diagnostics.Process]::Start($startInfo)
+    if ($null -eq $process) {
+        throw "Godot process did not start."
+    }
+    return $process
 }
 
 if (-not (Test-Path -LiteralPath $GodotPath)) {
@@ -66,11 +87,17 @@ else {
     }
 }
 
-Write-Host "[Topogenesis] Opening Godot..."
-$godotProcess = Start-Process -FilePath $GodotPath `
-    -ArgumentList @("--path", $GodotProject) `
-    -WorkingDirectory $RepoRoot `
-    -PassThru
+try {
+    Write-Host "[Topogenesis] Opening Godot..."
+    $godotProcess = Start-GodotProject -ExecutablePath $GodotPath -ProjectPath $GodotProject -WorkingDirectory $RepoRoot
+}
+catch {
+    if ($startedBridge -and $bridgeProcess -ne $null -and -not $bridgeProcess.HasExited) {
+        Write-Host "[Topogenesis] Godot launch failed. Stopping Python bridge..."
+        Stop-Process -Id $bridgeProcess.Id -Force
+    }
+    throw
+}
 
 if ($NoWait) {
     Write-Host "[Topogenesis] Godot launched. Bridge remains running in the background."
