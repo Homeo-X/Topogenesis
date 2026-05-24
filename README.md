@@ -16,6 +16,19 @@ A first Godot 4.6 3D RPG prototype lives in [godot/](godot/). It provides a
 small village, a third-person player, NPC pressure/affect state, interaction,
 and a bridge point for connecting the Python Topogenesis backend.
 
+## One-Command Godot Launch
+
+On Windows, run the RPG prototype with the bundled launcher:
+
+```powershell
+cd "C:\Users\rsijr\Documents\Codex\2026-05-15\topogenesis"
+powershell -ExecutionPolicy Bypass -File .\launch_topogenesis.ps1
+```
+
+The launcher starts the Python cognition/world bridge, waits until it is ready,
+then opens the Godot project. When Godot closes, the launcher stops the bridge.
+You can also double-click `launch_topogenesis.bat`.
+
 Topogenesis is early-stage research software. The engine runs, but the cognitive,
 field, developmental, and evolutionary mechanisms should be treated as
 experimental hypotheses until validated by ablations, baselines, and long-run
