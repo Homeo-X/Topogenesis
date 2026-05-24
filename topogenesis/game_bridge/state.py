@@ -7,12 +7,14 @@ from typing import Any
 from topogenesis.npc import (
     AffectField,
     CommunicationIntent,
+    EpisodicSemanticMemory,
     NeedPressure,
     OtherMindModel,
     SocialMemory,
     ViabilityState,
     interpret_intent,
     simulate_future,
+    simulate_hierarchical_future,
 )
 from topogenesis.world import OfflineConfig, OfflineSimulator, PopulationConfig, PopulationManager, WorldState
 from topogenesis.world.core_engine_runtime import CoreEngineRuntime
@@ -35,6 +37,7 @@ class BridgeNpc:
     affect: AffectField = field(default_factory=AffectField)
     mind: OtherMindModel = field(init=False)
     memory: SocialMemory = field(default_factory=lambda: SocialMemory(max_events=128))
+    world_memory: EpisodicSemanticMemory = field(default_factory=lambda: EpisodicSemanticMemory(max_episodes=128))
     energy: float = 1.0
     bodily_integrity: float = 1.0
     prediction_coherence: float = 0.78
@@ -42,6 +45,8 @@ class BridgeNpc:
     environmental_safety: float = 0.76
     trust_player: float = 0.5
     future_action: str = "observe"
+    future_depth: int = 1
+    imagination_fatigue: float = 0.0
     need_total: float = 0.12
     dominant_need: str = "epistemic"
 
@@ -77,12 +82,18 @@ class BridgeNpc:
         needs = NeedPressure.from_viability(viability)
         self.need_total = needs.total
         self.dominant_need = needs.dominant
+        self.imagination_fatigue = _clamp(self.imagination_fatigue * 0.985)
         self.affect.update(
             prediction_error=needs.epistemic,
             uncertainty=max(needs.epistemic, needs.safety),
             threat=max(needs.safety, player_threat),
             social_support=self.social_stability,
             control_feedback=1.0 - needs.total,
+        )
+        self.mind.observe_pressure(
+            need=needs.dominant,
+            intensity=needs.total,
+            affect=self.affect.stability,
         )
 
         intent = CommunicationIntent(
@@ -103,17 +114,60 @@ class BridgeNpc:
                 valence=self.trust_player - needs.total,
                 claim=needs.dominant,
             )
+            self.world_memory.remember_episode(
+                tick=0,
+                kind="player_help",
+                agents=["player"],
+                place="local",
+                salience=interpretation.accepted_confidence,
+                valence=self.trust_player - needs.total,
+                affect_intensity=1.0 - self.affect.stability,
+                claim=needs.dominant,
+            )
+        if player_threat > 0.0:
+            self.world_memory.remember_episode(
+                tick=0,
+                kind="threat",
+                agents=["player"],
+                place="local",
+                salience=max(player_threat, needs.safety),
+                valence=-max(player_threat, needs.safety),
+                affect_intensity=max(self.affect.threat_salience, player_threat),
+                claim="player_threat",
+            )
+        self.world_memory.decay()
 
-        action = "seek_food" if needs.metabolic >= needs.epistemic else "verify"
-        future = simulate_future(
-            action=action,
-            needs=needs,
-            affect=self.affect,
-            listener=self.mind,
-            intent=intent,
-        )
+        options = self._generate_action_options(needs, intent)
+        depth = 3 if needs.total > 0.34 and self.imagination_fatigue < 0.72 else 2
+        futures = [
+            simulate_hierarchical_future(
+                action=action,
+                needs=needs,
+                affect=self.affect,
+                listener=self.mind,
+                intent=intent if action in {"communicate", "share_information", "coordinate", "ask_help"} else None,
+                depth=depth,
+            )
+            for action in options
+        ]
+        future = max(futures, key=lambda item: item.value)
+        self.imagination_fatigue = _clamp(self.imagination_fatigue + future.cognitive_cost * delta)
+        self.energy = _clamp(self.energy - 0.0015 * future.cognitive_cost * delta)
         self.future_action = future.action
+        self.future_depth = future.depth
         return self.to_snapshot()
+
+    def _generate_action_options(self, needs: NeedPressure, intent: CommunicationIntent) -> list[str]:
+        options = ["verify", "rest"]
+        if needs.metabolic > 0.12:
+            options.append("seek_food")
+        if needs.repair > 0.14:
+            options.append("repair")
+        if needs.safety > 0.14:
+            options.extend(["seek_shelter", "withdraw"])
+        if max(needs.social, needs.attachment) > 0.12 or intent.should_speak(self.mind):
+            options.extend(["communicate", "coordinate"])
+        return list(dict.fromkeys(options))
 
     def to_snapshot(self) -> dict[str, Any]:
         return {
@@ -129,7 +183,10 @@ class BridgeNpc:
             "threat_salience": self.affect.threat_salience,
             "trust_player": self.trust_player,
             "future_action": self.future_action,
+            "future_depth": self.future_depth,
+            "imagination_fatigue": self.imagination_fatigue,
             "memory_events": list(self.memory.events),
+            "semantic_memory": dict(self.world_memory.semantics),
         }
 
     def restore(self, snapshot: dict[str, Any]) -> None:
@@ -145,6 +202,10 @@ class BridgeNpc:
         self.memory = SocialMemory(
             events=list(snapshot.get("memory_events", [])),
             max_events=128,
+        )
+        self.world_memory = EpisodicSemanticMemory(
+            semantics=dict(snapshot.get("semantic_memory", {})),
+            max_episodes=128,
         )
         self.mind.trust = self.trust_player
 

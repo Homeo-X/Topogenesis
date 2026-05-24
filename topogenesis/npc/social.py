@@ -34,6 +34,7 @@ class OtherMindModel:
     uncertainty: float = 0.5
     beliefs: dict[str, float] = field(default_factory=dict)
     goals: dict[str, float] = field(default_factory=dict)
+    pressure_estimates: dict[str, float] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         self.agent_id = non_empty_text(self.agent_id, field_name="agent_id")
@@ -43,6 +44,7 @@ class OtherMindModel:
         self.uncertainty = clamp01(self.uncertainty, default=0.5)
         self.beliefs = normalized_confidence_map(self.beliefs)
         self.goals = normalized_confidence_map(self.goals)
+        self.pressure_estimates = normalized_confidence_map(self.pressure_estimates)
 
     def update_belief(self, claim: str, confidence: float, source_trust: float) -> None:
         claim = non_empty_text(claim, field_name="claim")
@@ -63,6 +65,14 @@ class OtherMindModel:
             - 0.25 * self.fear
             - 0.20 * clamp01(social_risk)
         )
+
+    def observe_pressure(self, *, need: str, intensity: float, affect: float) -> None:
+        need = non_empty_text(need, field_name="need")
+        intensity = clamp01(intensity)
+        affect = clamp01(affect, default=0.5)
+        prior = self.pressure_estimates.get(need, 0.5)
+        self.pressure_estimates[need] = clamp01(0.72 * prior + 0.28 * intensity)
+        self.uncertainty = clamp01(0.92 * self.uncertainty + 0.08 * (1.0 - affect))
 
 
 @dataclass
@@ -114,3 +124,105 @@ class SocialMemory:
                        for event in matching)
         denom = sum(float(event["salience"]) for event in matching) + 1e-8
         return max(-1.0, min(1.0, weighted / denom))
+
+
+@dataclass
+class EpisodicSemanticMemory:
+    """Event memory plus consolidated general patterns."""
+
+    episodes: list[dict[str, object]] = field(default_factory=list)
+    semantics: dict[str, dict[str, float]] = field(default_factory=dict)
+    max_episodes: int = 256
+    decay_rate: float = 0.015
+    consolidation_threshold: float = 0.58
+
+    def __post_init__(self) -> None:
+        self.max_episodes = max(1, int(clamp(self.max_episodes, 1, 1_000_000, default=256)))
+        self.decay_rate = clamp01(self.decay_rate, default=0.015)
+        self.consolidation_threshold = clamp01(self.consolidation_threshold, default=0.58)
+        clean = []
+        for episode in self.episodes:
+            try:
+                clean.append(self._normalize_episode(episode))
+            except (KeyError, TypeError, ValueError):
+                continue
+        self.episodes = clean[-self.max_episodes:]
+        self.semantics = {
+            non_empty_text(str(key), field_name="semantic_key"): {
+                "confidence": clamp01(float(value.get("confidence", 0.0))),
+                "valence": clamp(float(value.get("valence", 0.0)), -1.0, 1.0),
+            }
+            for key, value in self.semantics.items()
+            if isinstance(value, dict)
+        }
+
+    def _normalize_episode(self, episode: dict[str, object]) -> dict[str, object]:
+        agents = episode.get("agents", [])
+        if not isinstance(agents, list):
+            agents = [str(agents)]
+        clean_agents = [
+            non_empty_text(str(agent), field_name="agent")
+            for agent in agents
+            if str(agent).strip()
+        ]
+        return {
+            "tick": int(clamp(float(episode.get("tick", 0.0)), 0.0, 1_000_000_000.0)),
+            "kind": non_empty_text(str(episode["kind"]), field_name="kind"),
+            "agents": clean_agents,
+            "place": non_empty_text(str(episode.get("place", "local")), field_name="place"),
+            "salience": clamp01(float(episode.get("salience", 0.0))),
+            "valence": clamp(float(episode.get("valence", 0.0)), -1.0, 1.0),
+            "affect_intensity": clamp01(float(episode.get("affect_intensity", 0.0))),
+            "claim": None if episode.get("claim") is None else non_empty_text(str(episode.get("claim")), field_name="claim"),
+        }
+
+    def remember_episode(
+        self,
+        *,
+        tick: int,
+        kind: str,
+        agents: list[str],
+        place: str,
+        salience: float,
+        valence: float,
+        affect_intensity: float,
+        claim: str | None = None,
+    ) -> None:
+        self.episodes.append(self._normalize_episode({
+            "tick": tick,
+            "kind": kind,
+            "agents": agents,
+            "place": place,
+            "salience": salience,
+            "valence": valence,
+            "affect_intensity": affect_intensity,
+            "claim": claim,
+        }))
+        if len(self.episodes) > self.max_episodes:
+            del self.episodes[:len(self.episodes) - self.max_episodes]
+        self.consolidate()
+
+    def decay(self) -> None:
+        kept = []
+        for episode in self.episodes:
+            affect = float(episode["affect_intensity"])
+            episode["salience"] = clamp01(float(episode["salience"]) * (1.0 - self.decay_rate * (1.0 - affect)))
+            if float(episode["salience"]) > 0.03:
+                kept.append(episode)
+        self.episodes = kept[-self.max_episodes:]
+
+    def consolidate(self) -> None:
+        for episode in self.episodes:
+            strength = float(episode["salience"]) * (0.55 + 0.45 * float(episode["affect_intensity"]))
+            if strength < self.consolidation_threshold:
+                continue
+            keys = [f"place:{episode['place']}:{episode['kind']}"]
+            keys.extend(f"agent:{agent}:{episode['kind']}" for agent in episode["agents"])
+            for key in keys:
+                prior = self.semantics.get(key, {"confidence": 0.0, "valence": 0.0})
+                confidence = clamp01(0.80 * prior["confidence"] + 0.20 * strength)
+                valence = clamp(0.80 * prior["valence"] + 0.20 * float(episode["valence"]), -1.0, 1.0)
+                self.semantics[key] = {"confidence": confidence, "valence": valence}
+
+    def semantic_confidence(self, key: str) -> float:
+        return clamp01(self.semantics.get(key, {}).get("confidence", 0.0))

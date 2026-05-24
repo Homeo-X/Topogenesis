@@ -28,6 +28,9 @@ class GameBridgeTests(unittest.TestCase):
         npc = snapshot["npcs"]["npc_mara"]
         self.assertTrue(0.0 <= npc["need_total"] <= 1.0)
         self.assertTrue(0.0 <= npc["affect_stability"] <= 1.0)
+        self.assertTrue(1 <= npc["future_depth"] <= 3)
+        self.assertTrue(0.0 <= npc["imagination_fatigue"] <= 1.0)
+        self.assertIn("semantic_memory", npc)
         self.assertIn(npc["dominant_need"], {
             "metabolic", "repair", "mnemonic", "epistemic",
             "social", "attachment", "safety",

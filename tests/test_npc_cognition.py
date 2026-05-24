@@ -5,12 +5,14 @@ from topogenesis.npc import (
     AffectField,
     Attachment,
     CommunicationIntent,
+    EpisodicSemanticMemory,
     NeedPressure,
     OtherMindModel,
     SocialMemory,
     ViabilityState,
     interpret_intent,
     simulate_future,
+    simulate_hierarchical_future,
 )
 
 
@@ -102,6 +104,55 @@ class NpcCognitionTests(unittest.TestCase):
         investigate = simulate_future(action="investigate", needs=needs, affect=affect)
 
         self.assertGreater(seek_food.stability_delta, investigate.stability_delta)
+
+    def test_hierarchical_future_has_cost_and_viability_depth(self):
+        needs = NeedPressure.from_viability(ViabilityState(
+            energy=0.18,
+            bodily_integrity=0.74,
+            prediction_coherence=0.55,
+            social_stability=0.45,
+        ))
+        affect = AffectField(cognitive_load=0.3, prediction_coherence=0.7)
+        shallow = simulate_hierarchical_future(
+            action="seek_food",
+            needs=needs,
+            affect=affect,
+            depth=1,
+        )
+        deep = simulate_hierarchical_future(
+            action="seek_food",
+            needs=needs,
+            affect=affect,
+            depth=3,
+        )
+
+        self.assertEqual(deep.depth, 3)
+        self.assertGreater(deep.cognitive_cost, shallow.cognitive_cost)
+        self.assertGreater(deep.viability_delta, shallow.viability_delta - 0.05)
+
+    def test_episodic_memory_consolidates_high_affect_semantics(self):
+        memory = EpisodicSemanticMemory(max_episodes=8, consolidation_threshold=0.4)
+        memory.remember_episode(
+            tick=12,
+            kind="threat",
+            agents=["guard"],
+            place="old_ruins",
+            salience=0.9,
+            valence=-0.8,
+            affect_intensity=0.9,
+            claim="ruins_are_dangerous",
+        )
+
+        self.assertEqual(len(memory.episodes), 1)
+        self.assertGreater(memory.semantic_confidence("place:old_ruins:threat"), 0.0)
+        self.assertLess(memory.semantics["place:old_ruins:threat"]["valence"], 0.0)
+
+    def test_other_mind_tracks_pressure_estimates(self):
+        mind = OtherMindModel(agent_id="healer")
+        mind.observe_pressure(need="safety", intensity=0.8, affect=0.35)
+
+        self.assertGreater(mind.pressure_estimates["safety"], 0.5)
+        self.assertGreater(mind.uncertainty, 0.5)
 
     def test_npc_inputs_are_sanitized_to_finite_ranges(self):
         affect = AffectField(
