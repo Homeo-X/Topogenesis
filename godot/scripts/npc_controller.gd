@@ -7,9 +7,10 @@ extends CharacterBody3D
 @export var turn_speed := 8.0
 @export var obstacle_lookahead := 3.2
 @export var obstacle_push_strength := 2.6
+@export var snapshot_controlled := false
 
 const CHARACTER_ASSET_ROOT := "res://assets/quaternius/animated_characters/Ultimate Animated Character Pack - Nov 2019/FBX/"
-const WORLD_HALF_EXTENT := 50.0
+const WORLD_HALF_EXTENT := 118.0
 const RESOURCE_CENTER := Vector3(-28.0, 0.0, -22.0)
 const HAZARD_CENTER := Vector3(31.0, 0.0, -26.0)
 
@@ -23,6 +24,8 @@ var body_material: StandardMaterial3D
 var cloak_material: StandardMaterial3D
 var navigation_agent: NavigationAgent3D
 var last_navigation_target := Vector3.INF
+var snapshot_target_position := Vector3.ZERO
+var snapshot_state: Dictionary = {}
 
 
 func _ready() -> void:
@@ -39,20 +42,25 @@ func _physics_process(delta: float) -> void:
 	if player != null:
 		distance_to_player = global_position.distance_to(player.global_position)
 
-	var hazard := _hazard_pressure()
-	var resource := _resource_pressure()
-	state = TopogenesisBridge.step_npc(npc_id, delta, {
-		"hazard": hazard,
-		"resource": resource,
-		"player_help": 0.0,
-		"player_threat": 1.0 if distance_to_player < 1.8 and Input.is_action_pressed("sprint") else 0.0,
-	})
+	if snapshot_controlled:
+		state = snapshot_state.duplicate(true)
+		current_target = _bounded_world(snapshot_target_position)
+	else:
+		var hazard := _hazard_pressure()
+		var resource := _resource_pressure()
+		state = TopogenesisBridge.step_npc(npc_id, delta, {
+			"hazard": hazard,
+			"resource": resource,
+			"player_help": 0.0,
+			"player_threat": 1.0 if distance_to_player < 1.8 and Input.is_action_pressed("sprint") else 0.0,
+		})
 	_update_visual_state()
 
-	retarget_timer -= delta
-	if retarget_timer <= 0.0 or global_position.distance_to(current_target) < 0.85:
-		current_target = _desired_position(player, distance_to_player)
-		retarget_timer = 0.75 + 0.15 * float(npc_id.length() % 4)
+	if not snapshot_controlled:
+		retarget_timer -= delta
+		if retarget_timer <= 0.0 or global_position.distance_to(current_target) < 0.85:
+			current_target = _desired_position(player, distance_to_player)
+			retarget_timer = 0.75 + 0.15 * float(npc_id.length() % 4)
 
 	var steering_target := _next_steering_target()
 	var direction := global_position.direction_to(steering_target)
@@ -74,6 +82,11 @@ func _physics_process(delta: float) -> void:
 
 
 func interact() -> String:
+	if snapshot_controlled:
+		TopogenesisBridge.remember(npc_id, "player_interaction", 0.25, "player_spoke")
+		var need := str(state.get("dominant_need", "stability"))
+		var intention := str(state.get("future_action", "observe")).replace("_", " ")
+		return "%s: I am watching the %s pressure. I may %s next." % [display_name, need, intention]
 	TopogenesisBridge.remember(npc_id, "player_interaction", 0.25, "player_spoke")
 	state = TopogenesisBridge.step_npc(npc_id, 0.1, {
 		"hazard": _hazard_pressure(),
@@ -86,7 +99,9 @@ func interact() -> String:
 
 
 func debug_summary() -> String:
-	if state.is_empty():
+	if state.is_empty() and not snapshot_state.is_empty():
+		state = snapshot_state.duplicate(true)
+	elif state.is_empty():
 		state = TopogenesisBridge.step_npc(npc_id, 0.0, {})
 	return "%s | need:%s %.2f | affect:%.2f | future:%s | trust:%.2f" % [
 		display_name,
@@ -100,6 +115,32 @@ func debug_summary() -> String:
 
 func current_state() -> Dictionary:
 	return state.duplicate(true)
+
+
+func apply_offline_snapshot(data: Dictionary, scale: float) -> void:
+	snapshot_controlled = true
+	display_name = str(data.get("display_name", display_name))
+	name = display_name
+	var pos = data.get("position", [])
+	if typeof(pos) == TYPE_ARRAY and pos.size() >= 2:
+		snapshot_target_position = Vector3(float(pos[0]) * scale, 0.2, float(pos[1]) * scale)
+		home_position = snapshot_target_position
+	snapshot_state = {
+		"display_name": display_name,
+		"energy": float(data.get("energy", 1.0)),
+		"hydration": float(data.get("hydration", 1.0)),
+		"bodily_integrity": float(data.get("bodily_integrity", 1.0)),
+		"prediction_coherence": float(data.get("prediction_coherence", 0.78)),
+		"social_stability": float(data.get("social_stability", 0.58)),
+		"environmental_safety": float(data.get("environmental_safety", 0.76)),
+		"need_total": float(data.get("need_total", 0.0)),
+		"dominant_need": str(data.get("dominant_need", "unknown")),
+		"affect_stability": float(data.get("affect_stability", 0.75)),
+		"future_action": str(data.get("future_action", "observe")),
+		"trust_player": float(data.get("trust_player", 0.5)),
+		"threat_salience": clampf(1.0 - float(data.get("environmental_safety", 0.76)), 0.0, 1.0),
+		"memory_events": [],
+	}
 
 
 func _build_navigation_agent() -> void:

@@ -15,7 +15,7 @@ extends CharacterBody3D
 @export var max_camera_pitch := 62.0
 
 const CHARACTER_ASSET_ROOT := "res://assets/quaternius/animated_characters/Ultimate Animated Character Pack - Nov 2019/FBX/"
-const WORLD_HALF_EXTENT := 50.0
+const WORLD_HALF_EXTENT := 118.0
 
 var look_target: Vector3 = Vector3.FORWARD
 var camera: Camera3D

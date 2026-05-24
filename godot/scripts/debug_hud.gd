@@ -71,6 +71,17 @@ func _process(delta: float) -> void:
 		TopogenesisBridge.backend_status(),
 	]
 	var lines: Array[String] = ["Topogenesis RPG Vertical Slice"]
+	var snapshot := TopogenesisBridge.current_world_snapshot()
+	if not snapshot.is_empty():
+		var clock: Dictionary = snapshot.get("clock", {})
+		var world: Dictionary = snapshot.get("world", {})
+		var summary: Dictionary = snapshot.get("summary", {})
+		lines.append("Offline world day:%s pop:%s food:%.0f%% water:%.0f%%" % [
+			str(clock.get("day", 0)),
+			str(summary.get("population_final", "?")),
+			100.0 * float(world.get("food_stock", 1.0)),
+			100.0 * float(world.get("water_stock", 1.0)),
+		])
 	for npc in get_tree().get_nodes_in_group("npc"):
 		if npc.has_method("debug_summary"):
 			lines.append(npc.debug_summary())

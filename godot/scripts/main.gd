@@ -10,12 +10,19 @@ var torch_lights: Array[OmniLight3D] = []
 var loaded_assets: Dictionary = {}
 var time_of_day := 0.68
 var day_speed := 0.018
+var snapshot_root: Node3D
+var snapshot_locations_root: Node3D
+var snapshot_npcs_root: Node3D
+var snapshot_location_nodes: Dictionary = {}
+var snapshot_npc_nodes: Dictionary = {}
+var snapshot_sync_timer := 0.0
+var using_offline_snapshot := false
 
 const MEDIEVAL_ASSET_ROOT := "res://assets/quaternius/medieval_village/glTF/"
 const PROP_ASSET_ROOT := "res://assets/quaternius/fantasy_props/Exports/glTF/"
 const NATURE_ASSET_ROOT := "res://assets/quaternius/stylized_nature/glTF/"
-const WORLD_HALF_EXTENT := 52.0
-const GROUND_SIZE := 104.0
+const WORLD_HALF_EXTENT := 120.0
+const GROUND_SIZE := 240.0
 
 
 func _ready() -> void:
@@ -24,6 +31,7 @@ func _ready() -> void:
 	_build_ground()
 	_build_navigation_surface()
 	_build_village()
+	_build_snapshot_roots()
 	_spawn_player()
 	_spawn_npcs()
 	_spawn_pressure_markers()
@@ -40,6 +48,7 @@ func _process(delta: float) -> void:
 	if is_paused:
 		return
 	_update_lighting(delta)
+	_sync_offline_snapshot(delta)
 	nearest_npc = _find_nearest_npc()
 	if nearest_npc != null:
 		hud.set_prompt("Press E to speak with %s" % nearest_npc.name)
@@ -151,6 +160,18 @@ func _build_navigation_surface() -> void:
 	nav_mesh.add_polygon(PackedInt32Array([0, 1, 2, 3]))
 	region.navigation_mesh = nav_mesh
 	add_child(region)
+
+
+func _build_snapshot_roots() -> void:
+	snapshot_root = Node3D.new()
+	snapshot_root.name = "OfflineWorldSnapshot"
+	add_child(snapshot_root)
+	snapshot_locations_root = Node3D.new()
+	snapshot_locations_root.name = "Locations"
+	snapshot_root.add_child(snapshot_locations_root)
+	snapshot_npcs_root = Node3D.new()
+	snapshot_npcs_root.name = "VisibleNPCs"
+	snapshot_root.add_child(snapshot_npcs_root)
 
 
 func _build_village() -> void:
@@ -680,6 +701,149 @@ func _add_marker(pos: Vector3, color: Color, label_text: String) -> void:
 func _spawn_hud() -> void:
 	hud = load("res://scripts/debug_hud.gd").new()
 	add_child(hud)
+
+
+func _sync_offline_snapshot(delta: float) -> void:
+	snapshot_sync_timer -= delta
+	if snapshot_sync_timer > 0.0:
+		return
+	snapshot_sync_timer = 0.75
+	var snapshot := TopogenesisBridge.current_world_snapshot()
+	if snapshot.is_empty():
+		return
+	var world: Dictionary = snapshot.get("world", {})
+	var half_extent := float(world.get("half_extent", 160.0))
+	var scale := WORLD_HALF_EXTENT / maxf(1.0, half_extent)
+	var locations = snapshot.get("locations", [])
+	if typeof(locations) == TYPE_ARRAY:
+		_sync_snapshot_locations(locations, scale)
+	var npcs = snapshot.get("npcs", [])
+	if typeof(npcs) == TYPE_ARRAY:
+		_sync_snapshot_npcs(npcs, scale)
+	if not using_offline_snapshot and typeof(npcs) == TYPE_ARRAY and not npcs.is_empty():
+		_remove_local_npcs_for_offline_world()
+		using_offline_snapshot = true
+
+
+func _sync_snapshot_locations(locations: Array, scale: float) -> void:
+	var seen := {}
+	for loc in locations:
+		if typeof(loc) != TYPE_DICTIONARY:
+			continue
+		var loc_id := "loc_%s" % str(loc.get("id", loc.get("name", "")))
+		seen[loc_id] = true
+		if not snapshot_location_nodes.has(loc_id):
+			snapshot_location_nodes[loc_id] = _create_snapshot_location(loc)
+		var node := snapshot_location_nodes[loc_id] as Node3D
+		node.position = _snapshot_vec2_to_world(loc.get("position", []), scale)
+		_update_snapshot_location_visual(node, loc, scale)
+	for loc_id in snapshot_location_nodes.keys().duplicate():
+		if not seen.has(loc_id):
+			var stale := snapshot_location_nodes[loc_id] as Node
+			if stale != null:
+				stale.queue_free()
+			snapshot_location_nodes.erase(loc_id)
+
+
+func _sync_snapshot_npcs(npcs: Array, scale: float) -> void:
+	var seen := {}
+	var script := load("res://scripts/npc_controller.gd")
+	for npc_data in npcs:
+		if typeof(npc_data) != TYPE_DICTIONARY:
+			continue
+		var npc_id := "offline_%s" % str(npc_data.get("id", "unknown"))
+		seen[npc_id] = true
+		if not snapshot_npc_nodes.has(npc_id):
+			var npc := CharacterBody3D.new()
+			npc.name = str(npc_data.get("display_name", npc_id))
+			npc.set_script(script)
+			npc.npc_id = npc_id
+			npc.display_name = str(npc_data.get("display_name", npc_id))
+			npc.snapshot_controlled = true
+			npc.home_position = _snapshot_vec2_to_world(npc_data.get("position", []), scale)
+			npc.position = npc.home_position
+			snapshot_npcs_root.add_child(npc)
+			snapshot_npc_nodes[npc_id] = npc
+		var node := snapshot_npc_nodes[npc_id] as Node
+		if node != null and node.has_method("apply_offline_snapshot"):
+			node.call("apply_offline_snapshot", npc_data, scale)
+	for npc_id in snapshot_npc_nodes.keys().duplicate():
+		if not seen.has(npc_id):
+			var stale := snapshot_npc_nodes[npc_id] as Node
+			if stale != null:
+				stale.queue_free()
+			snapshot_npc_nodes.erase(npc_id)
+
+
+func _remove_local_npcs_for_offline_world() -> void:
+	for npc in get_tree().get_nodes_in_group("npc"):
+		if npc is Node and not bool(npc.get("snapshot_controlled")):
+			(npc as Node).queue_free()
+
+
+func _snapshot_vec2_to_world(pos, scale: float) -> Vector3:
+	if typeof(pos) != TYPE_ARRAY or pos.size() < 2:
+		return Vector3.ZERO
+	return Vector3(float(pos[0]) * scale, 0.2, float(pos[1]) * scale)
+
+
+func _create_snapshot_location(loc: Dictionary) -> Node3D:
+	var root := Node3D.new()
+	root.name = "Snapshot_%s" % str(loc.get("name", "location"))
+	var disc := MeshInstance3D.new()
+	disc.name = "Disc"
+	var cylinder := CylinderMesh.new()
+	cylinder.height = 0.08
+	disc.mesh = cylinder
+	root.add_child(disc)
+	var label := Label3D.new()
+	label.name = "Label"
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	root.add_child(label)
+	snapshot_locations_root.add_child(root)
+	return root
+
+
+func _update_snapshot_location_visual(root: Node3D, loc: Dictionary, scale: float) -> void:
+	var kind := str(loc.get("kind", "unknown"))
+	var radius := maxf(1.0, float(loc.get("radius", 4.0)) * scale)
+	var disc := root.get_node_or_null("Disc") as MeshInstance3D
+	if disc != null:
+		var mesh := disc.mesh as CylinderMesh
+		if mesh != null:
+			mesh.top_radius = radius
+			mesh.bottom_radius = radius
+		var mat := StandardMaterial3D.new()
+		mat.albedo_color = _location_color(kind, loc)
+		mat.emission_enabled = true
+		mat.emission = mat.albedo_color
+		mat.emission_energy_multiplier = 0.18
+		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		disc.material_override = mat
+	var label := root.get_node_or_null("Label") as Label3D
+	if label != null:
+		var stock_text := ""
+		if float(loc.get("capacity", 0.0)) > 0.0:
+			stock_text = " %.0f%%" % [100.0 * float(loc.get("stock", 0.0)) / maxf(1.0, float(loc.get("capacity", 1.0)))]
+		label.text = "%s\n%s%s" % [str(loc.get("name", "location")), kind, stock_text]
+		label.position = Vector3(0.0, 1.3, 0.0)
+
+
+func _location_color(kind: String, loc: Dictionary) -> Color:
+	if kind == "food":
+		return Color(0.18, 0.78, 0.28, 0.28)
+	if kind == "water":
+		return Color(0.15, 0.45, 0.88, 0.30)
+	if kind == "materials":
+		return Color(0.62, 0.58, 0.46, 0.28)
+	if kind == "hazard":
+		var danger := float(loc.get("danger", 0.4))
+		return Color(0.88, 0.12 + 0.16 * (1.0 - danger), 0.10, 0.22 + 0.22 * danger)
+	if kind == "social":
+		return Color(0.80, 0.58, 0.18, 0.24)
+	if kind == "home":
+		return Color(0.56, 0.42, 0.90, 0.22)
+	return Color(0.8, 0.8, 0.8, 0.18)
 
 
 func _find_nearest_npc() -> Node:
