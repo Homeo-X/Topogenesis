@@ -16,6 +16,9 @@ const HAZARD_CENTER := Vector3(31.0, 0.0, -26.0)
 const NPC_COLLISION_LAYER := 2
 const WORLD_COLLISION_MASK := 1
 const LABEL_VISIBLE_DISTANCE := 12.0
+const FULL_ANIMATION_DISTANCE := 18.0
+const LIGHT_MOTION_DISTANCE := 34.0
+const HIDE_DISTANT_LABEL_DISTANCE := 9.0
 
 var wander_angle := 0.0
 var retarget_timer := 0.0
@@ -34,6 +37,8 @@ var character_asset_path := ""
 var animation_player: AnimationPlayer
 var active_animation := ""
 var has_snapshot_target := false
+var visual_update_timer := 0.0
+var cached_player_distance := 999.0
 
 
 func _ready() -> void:
@@ -51,6 +56,7 @@ func _physics_process(delta: float) -> void:
 	var distance_to_player := 999.0
 	if player != null:
 		distance_to_player = global_position.distance_to(player.global_position)
+	cached_player_distance = distance_to_player
 
 	if snapshot_controlled:
 		state = snapshot_state.duplicate(true)
@@ -64,7 +70,10 @@ func _physics_process(delta: float) -> void:
 			"player_help": 0.0,
 			"player_threat": 1.0 if distance_to_player < 1.8 and Input.is_action_pressed("sprint") else 0.0,
 		})
-	_update_visual_state()
+	visual_update_timer -= delta
+	if visual_update_timer <= 0.0:
+		_update_visual_state()
+		visual_update_timer = 0.16 if distance_to_player < FULL_ANIMATION_DISTANCE else 0.45
 	_update_label_visibility(distance_to_player)
 
 	if not snapshot_controlled:
@@ -513,7 +522,15 @@ func _update_character_motion(_delta: float) -> void:
 	if character_model == null:
 		return
 	var speed := Vector2(velocity.x, velocity.z).length()
-	if animation_player != null and animation_player.get_animation_list().size() > 0:
+	if cached_player_distance > LIGHT_MOTION_DISTANCE:
+		if animation_player != null and active_animation != "__lod_paused__":
+			animation_player.stop(false)
+			active_animation = "__lod_paused__"
+		character_model.position.y = 0.0
+		character_model.rotation_degrees.x = 0.0
+		character_model.rotation_degrees.z = 0.0
+		return
+	if animation_player != null and animation_player.get_animation_list().size() > 0 and cached_player_distance <= FULL_ANIMATION_DISTANCE:
 		var wanted := _select_animation_name(speed)
 		if wanted != "" and wanted != active_animation:
 			animation_player.play(wanted)
@@ -523,6 +540,9 @@ func _update_character_motion(_delta: float) -> void:
 		else:
 			animation_player.speed_scale = 1.0
 		return
+	if animation_player != null and active_animation != "__lod_paused__":
+		animation_player.stop(false)
+		active_animation = "__lod_paused__"
 	var t := float(Time.get_ticks_msec()) * 0.001
 	if speed > 0.08:
 		var gait := sin(t * 8.5 + float(absi(hash(npc_id)) % 10))
@@ -637,4 +657,4 @@ func _update_visual_state() -> void:
 
 func _update_label_visibility(distance_to_player: float) -> void:
 	if overhead_label != null:
-		overhead_label.visible = distance_to_player <= LABEL_VISIBLE_DISTANCE
+		overhead_label.visible = distance_to_player <= minf(LABEL_VISIBLE_DISTANCE, HIDE_DISTANT_LABEL_DISTANCE)

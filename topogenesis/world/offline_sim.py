@@ -64,7 +64,7 @@ class OfflineSimulator:
     def run_days(self, days: int) -> OfflineSummary:
         return self.run_ticks(days * self.world.clock.ticks_per_day)
 
-    def snapshot(self, *, visible_limit: int = 96) -> dict:
+    def snapshot(self, *, visible_limit: int = 48) -> dict:
         alive_idx = [
             int(idx) for idx, alive in enumerate(self.population.alive)
             if bool(alive)

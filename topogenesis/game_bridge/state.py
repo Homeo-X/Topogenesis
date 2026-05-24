@@ -223,7 +223,7 @@ class GameBridgeState:
         with self._core_lock:
             self.core_runtime.step()
 
-    def world_snapshot(self, visible_limit: int = 96) -> dict[str, Any]:
+    def world_snapshot(self, visible_limit: int = 48) -> dict[str, Any]:
         snapshot = self.offline.snapshot(visible_limit=visible_limit)
         if self.full_engine_enabled and self.core_runtime is not None:
             core_snapshot = self.core_runtime.snapshot()
