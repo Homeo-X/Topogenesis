@@ -15,6 +15,8 @@ for judging each subsystem is defined in
 
 New readers should start with [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)
 for verification commands, suggested experiment presets, and contribution areas.
+This branch's deeper AGI-facing commitments are tracked in
+[docs/AGI_RESEARCH_BRANCH.md](docs/AGI_RESEARCH_BRANCH.md).
 
 Topogenesis is early-stage research software. The engine runs, but the
 cognitive, field, developmental, and evolutionary mechanisms should be treated
