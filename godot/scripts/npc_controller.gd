@@ -135,6 +135,7 @@ func apply_offline_snapshot(data: Dictionary, scale: float) -> void:
 	snapshot_state = {
 		"display_name": display_name,
 		"calling": str(data.get("calling", "villager")),
+		"engine_mode": str(data.get("engine_mode", "offline_population")),
 		"energy": float(data.get("energy", 1.0)),
 		"hydration": float(data.get("hydration", 1.0)),
 		"bodily_integrity": float(data.get("bodily_integrity", 1.0)),
@@ -449,9 +450,16 @@ func _update_visual_state() -> void:
 		return
 	var need := str(state.get("dominant_need", "unknown"))
 	var calling := str(state.get("calling", "villager"))
+	var engine_mode := str(state.get("engine_mode", "offline_population"))
 	var affect := float(state.get("affect_stability", 0.5))
 	var threat := float(state.get("threat_salience", 0.0))
-	overhead_label.text = "%s\n%s | %s %.2f" % [display_name, calling, need, state.get("need_total", 0.0)]
+	overhead_label.text = "%s\n%s | %s %.2f%s" % [
+		display_name,
+		calling,
+		need,
+		state.get("need_total", 0.0),
+		" | core" if engine_mode == "full_core" else "",
+	]
 	var mat := StandardMaterial3D.new()
 	mat.emission_enabled = true
 	if need == "safety":

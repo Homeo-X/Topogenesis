@@ -35,7 +35,16 @@ class GameBridgeTests(unittest.TestCase):
         world = state.world_snapshot()
         self.assertIn("locations", world)
         self.assertIn("npcs", world)
+        self.assertIn("core_engine", world)
+        self.assertFalse(world["core_engine"]["enabled"])
         self.assertGreaterEqual(world["world"]["carrying_capacity"], 800)
+
+    def test_bridge_can_advertise_full_core_engine_layer(self):
+        state = GameBridgeState(full_engine_enabled=True, full_engine_interval=999)
+        world = state.world_snapshot()
+        self.assertTrue(world["core_engine"]["enabled"])
+        self.assertEqual(world["core_engine"]["mode"], "full_topogenesis_agent_self_maintain")
+        self.assertFalse(world["core_engine"]["initialized"])
 
     def test_bridge_http_step_endpoint(self):
         class TestHandler(BridgeHandler):

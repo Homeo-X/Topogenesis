@@ -56,6 +56,12 @@ and prediction disruption.
 The Godot bridge exposes the same offline region through `/world_snapshot`.
 When the Python bridge is running, Godot NPC pressure reads use that shared
 food/hazard landscape instead of the older local-only pressure centers.
+The bridge also runs a full `TopogenesisAgent.self_maintain(...)` organism in
+the background by default and exposes it as the first visible `Core Organism`.
+The remaining villagers continue to use the scalable batched population layer
+so the game can show hundreds of NPCs without trying to run the heavy reference
+engine hundreds of times per frame. Start the bridge with `--no-full-engine`
+only when you intentionally want the lightweight population model alone.
 
 ## North Star
 

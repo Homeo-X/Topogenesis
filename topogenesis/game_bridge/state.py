@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import threading
 from typing import Any
 
 from topogenesis.npc import (
@@ -14,6 +15,7 @@ from topogenesis.npc import (
     simulate_future,
 )
 from topogenesis.world import OfflineConfig, OfflineSimulator, PopulationConfig, PopulationManager, WorldState
+from topogenesis.world.core_engine_runtime import CoreEngineRuntime
 
 
 def _clamp(value: Any, low: float = 0.0, high: float = 1.0, default: float = 0.0) -> float:
@@ -151,6 +153,12 @@ class BridgeNpc:
 class GameBridgeState:
     npcs: dict[str, BridgeNpc] = field(default_factory=dict)
     tick: int = 0
+    full_engine_enabled: bool = False
+    full_engine_interval: int = 8
+    core_runtime: CoreEngineRuntime | None = None
+    _core_thread: threading.Thread | None = field(default=None, init=False, repr=False)
+    _core_lock: threading.Lock = field(default_factory=threading.Lock, init=False, repr=False)
+    _core_last_started_tick: int = field(default=-1, init=False, repr=False)
     offline: OfflineSimulator = field(default_factory=lambda: OfflineSimulator(
         world=WorldState.default(ticks_per_day=60, seed=11),
         population_manager=PopulationManager(
@@ -159,6 +167,10 @@ class GameBridgeState:
         ),
         config=OfflineConfig(ticks_per_day=60, metrics_interval=60, seed=11),
     ))
+
+    def __post_init__(self) -> None:
+        if self.full_engine_enabled and self.core_runtime is None:
+            self.core_runtime = CoreEngineRuntime(agent_count=1, world_size=16, seed=11)
 
     def register_npc(self, npc_id: str, display_name: str | None = None) -> None:
         npc_id = str(npc_id).strip()
@@ -185,11 +197,64 @@ class GameBridgeState:
                 pressure if isinstance(pressure, dict) else {},
             )
         self.offline.run_ticks(1)
+        self._maybe_start_core_step()
         self.tick += 1
         return self.snapshot()
 
+    def _maybe_start_core_step(self) -> None:
+        if not self.full_engine_enabled or self.core_runtime is None:
+            return
+        interval = max(1, int(self.full_engine_interval))
+        if self.tick % interval != 0 or self._core_last_started_tick == self.tick:
+            return
+        if self._core_thread is not None and self._core_thread.is_alive():
+            return
+        self._core_last_started_tick = self.tick
+        self._core_thread = threading.Thread(
+            target=self._run_core_step_background,
+            name="topogenesis-core-engine",
+            daemon=True,
+        )
+        self._core_thread.start()
+
+    def _run_core_step_background(self) -> None:
+        if self.core_runtime is None:
+            return
+        with self._core_lock:
+            self.core_runtime.step()
+
     def world_snapshot(self, visible_limit: int = 96) -> dict[str, Any]:
-        return self.offline.snapshot(visible_limit=visible_limit)
+        snapshot = self.offline.snapshot(visible_limit=visible_limit)
+        if self.full_engine_enabled and self.core_runtime is not None:
+            core_snapshot = self.core_runtime.snapshot()
+            snapshot["core_engine"] = core_snapshot
+            if core_snapshot.get("agents") and snapshot.get("npcs"):
+                core_agent = core_snapshot["agents"][0]
+                metrics = core_agent.get("metrics", {})
+                snapshot["npcs"][0].update({
+                    "id": "core_0",
+                    "display_name": core_agent.get("display_name", "Core Organism"),
+                    "calling": "full core organism",
+                    "position": core_agent.get("position", snapshot["npcs"][0].get("position")),
+                    "energy": core_agent.get("energy", snapshot["npcs"][0].get("energy")),
+                    "bodily_integrity": core_agent.get("health", snapshot["npcs"][0].get("bodily_integrity")),
+                    "affect_stability": max(0.0, min(1.0, float(core_agent.get("membrane", 1.0)))),
+                    "need_total": metrics.get("need_total", snapshot["npcs"][0].get("need_total")),
+                    "dominant_need": metrics.get("dominant_need", snapshot["npcs"][0].get("dominant_need")),
+                    "future_action": metrics.get("future_action", snapshot["npcs"][0].get("future_action")),
+                    "engine_mode": "full_core",
+                })
+        else:
+            snapshot["core_engine"] = {
+                "enabled": False,
+                "mode": "offline_population_only",
+                "initialized": False,
+                "tick": 0,
+                "agent_count": 0,
+                "last_error": "",
+                "agents": [],
+            }
+        return snapshot
 
     def snapshot(self) -> dict[str, Any]:
         return {

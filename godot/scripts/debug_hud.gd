@@ -142,8 +142,13 @@ func _world_status_text() -> String:
 	var clock: Dictionary = snapshot.get("clock", {})
 	var world: Dictionary = snapshot.get("world", {})
 	var summary: Dictionary = snapshot.get("summary", {})
-	return "%s\nDay %s   Pop %s   Food %.0f%%   Water %.0f%%" % [
+	var core: Dictionary = snapshot.get("core_engine", {})
+	var core_text := "Full core warming" if bool(core.get("enabled", false)) else "Population model"
+	if bool(core.get("initialized", false)):
+		core_text = "Full core tick %s" % str(core.get("tick", 0))
+	return "%s | %s\nDay %s   Pop %s   Food %.0f%%   Water %.0f%%" % [
 		bridge,
+		core_text,
 		str(clock.get("day", 0)),
 		str(summary.get("population_final", "?")),
 		100.0 * float(world.get("food_stock", 1.0)),
@@ -158,13 +163,15 @@ func set_focus_state(npc_name: String, state: Dictionary) -> void:
 	var affect := float(state.get("affect_stability", 0.0))
 	var future := str(state.get("future_action", "observe"))
 	var trust := float(state.get("trust_player", 0.5))
+	var engine_mode := str(state.get("engine_mode", "offline_population"))
 	var memory_events: Array = state.get("memory_events", [])
 	var memory_text := "none"
 	if not memory_events.is_empty() and typeof(memory_events[-1]) == TYPE_DICTIONARY:
 		memory_text = str(memory_events[-1].get("claim", "recent pressure"))
-	focus_label.text = "%s\n%s\n\nNeed        %s %.2f\nStability   %.2f\nIntention   %s\nTrust       %.2f\nMemory      %s" % [
+	focus_label.text = "%s\n%s\n%s\n\nNeed        %s %.2f\nStability   %.2f\nIntention   %s\nTrust       %.2f\nMemory      %s" % [
 		npc_name,
 		calling,
+		"Full core engine" if engine_mode == "full_core" else "Population ecology",
 		need,
 		need_total,
 		affect,
