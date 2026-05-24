@@ -4,9 +4,9 @@ extends CharacterBody3D
 @export var display_name := "Villager"
 @export var home_position := Vector3.ZERO
 @export var walk_speed := 1.65
-@export var turn_speed := 8.0
+@export var turn_speed := 6.5
 @export var obstacle_lookahead := 3.2
-@export var obstacle_push_strength := 2.6
+@export var obstacle_push_strength := 1.8
 @export var snapshot_controlled := false
 
 const CHARACTER_ASSET_ROOT := "res://assets/quaternius/animated_characters/Ultimate Animated Character Pack - Nov 2019/FBX/"
@@ -33,6 +33,7 @@ var character_model: Node3D
 var character_asset_path := ""
 var animation_player: AnimationPlayer
 var active_animation := ""
+var has_snapshot_target := false
 
 
 func _ready() -> void:
@@ -78,11 +79,11 @@ func _physics_process(delta: float) -> void:
 	if global_position.distance_to(current_target) > 0.65:
 		var movement_dir := (direction.normalized() + _obstacle_avoidance()).normalized()
 		var target_velocity := movement_dir * walk_speed
-		velocity.x = move_toward(velocity.x, target_velocity.x, 5.5 * delta)
-		velocity.z = move_toward(velocity.z, target_velocity.z, 5.5 * delta)
+		velocity.x = move_toward(velocity.x, target_velocity.x, 3.8 * delta)
+		velocity.z = move_toward(velocity.z, target_velocity.z, 3.8 * delta)
 	else:
-		velocity.x = move_toward(velocity.x, 0.0, 5.5 * delta)
-		velocity.z = move_toward(velocity.z, 0.0, 5.5 * delta)
+		velocity.x = move_toward(velocity.x, 0.0, 4.2 * delta)
+		velocity.z = move_toward(velocity.z, 0.0, 4.2 * delta)
 	velocity.y = -0.1
 	move_and_slide()
 
@@ -135,7 +136,12 @@ func apply_offline_snapshot(data: Dictionary, scale: float) -> void:
 	var pos = data.get("position", [])
 	if typeof(pos) == TYPE_ARRAY and pos.size() >= 2:
 		var base_position := Vector3(float(pos[0]) * scale, 0.2, float(pos[1]) * scale)
-		snapshot_target_position = _bounded_world(base_position + _snapshot_crowd_offset(data))
+		var next_target := _bounded_world(base_position + _snapshot_crowd_offset(data))
+		if has_snapshot_target:
+			snapshot_target_position = snapshot_target_position.lerp(next_target, 0.35)
+		else:
+			snapshot_target_position = next_target
+			has_snapshot_target = true
 		home_position = snapshot_target_position
 	snapshot_state = {
 		"display_name": display_name,

@@ -2,11 +2,11 @@ extends CharacterBody3D
 
 @export var speed := 6.0
 @export var sprint_speed := 8.5
-@export var acceleration := 16.0
-@export var braking := 18.0
+@export var acceleration := 10.0
+@export var braking := 12.0
 @export var gravity := 18.0
-@export var arrival_radius := 0.28
-@export var turn_speed := 10.0
+@export var arrival_radius := 0.46
+@export var turn_speed := 7.5
 @export var zoom_step := 1.1
 @export var min_zoom := 4.8
 @export var max_zoom := 14.0
@@ -21,6 +21,8 @@ var look_target: Vector3 = Vector3.FORWARD
 var camera: Camera3D
 var visual_root: Node3D
 var imported_model: Node3D
+var animation_player: AnimationPlayer
+var active_animation := ""
 var move_target := Vector3.ZERO
 var has_move_target := false
 var camera_distance := 8.0
@@ -78,7 +80,7 @@ func _physics_process(delta: float) -> void:
 		has_move_target = false
 
 	var active_speed := sprint_speed if Input.is_action_pressed("sprint") else speed
-	var slow_factor := 1.0 if using_keyboard else (clampf(distance / 1.7, 0.25, 1.0) if has_move_target else 0.0)
+	var slow_factor := 1.0 if using_keyboard else (smoothstep(0.0, 3.0, distance) if has_move_target else 0.0)
 
 	if has_move_target or using_keyboard:
 		var target_velocity := input_dir * active_speed * slow_factor
@@ -98,6 +100,7 @@ func _physics_process(delta: float) -> void:
 		var target_yaw := atan2(-look_target.x, -look_target.z)
 		rotation.y = lerp_angle(rotation.y, target_yaw, minf(1.0, turn_speed * delta))
 	_update_body_motion(delta)
+	_update_imported_animation(Vector2(velocity.x, velocity.z).length())
 	_update_camera(delta)
 
 
@@ -111,7 +114,8 @@ func _update_camera(delta: float) -> void:
 		sin(pitch_rad) * camera_distance,
 		cos(camera_yaw) * cos(pitch_rad) * camera_distance
 	)
-	camera.position = camera.position.lerp(desired, minf(1.0, 10.0 * delta))
+	var desired_global := global_position + desired
+	camera.global_position = camera.global_position.lerp(desired_global, minf(1.0, 8.0 * delta))
 	camera.look_at(global_position + Vector3(0.0, 1.05, 0.0), Vector3.UP)
 
 
@@ -265,9 +269,10 @@ func _build_body() -> void:
 
 	camera = Camera3D.new()
 	camera.name = "Camera3D"
-	camera.position = Vector3(0.0, 5.8, 8.0)
+	camera.top_level = true
 	camera.current = true
 	add_child(camera)
+	camera.global_position = global_position + Vector3(0.0, 5.8, 8.0)
 	_update_camera(1.0)
 
 
@@ -286,22 +291,46 @@ func _add_character_model() -> Node3D:
 	model.rotation_degrees.y = 180.0
 	visual_root.add_child(model)
 	imported_model = model
-	_play_first_imported_animation(imported_model)
+	animation_player = _find_animation_player(imported_model)
 	return model
 
 
-func _play_first_imported_animation(root: Node) -> void:
-	if root == null:
-		return
+func _find_animation_player(root: Node) -> AnimationPlayer:
 	if root is AnimationPlayer:
-		var player := root as AnimationPlayer
-		var animations := player.get_animation_list()
-		for animation_name in animations:
-			if animation_name != "RESET":
-				player.play(animation_name)
-				return
+		return root as AnimationPlayer
 	for child in root.get_children():
-		_play_first_imported_animation(child)
+		var found := _find_animation_player(child)
+		if found != null:
+			return found
+	return null
+
+
+func _update_imported_animation(horizontal_speed: float) -> void:
+	if animation_player == null or animation_player.get_animation_list().is_empty():
+		return
+	var wanted := _select_animation_name(horizontal_speed)
+	if wanted != "" and wanted != active_animation:
+		animation_player.play(wanted)
+		active_animation = wanted
+	animation_player.speed_scale = clampf(horizontal_speed / maxf(0.1, speed), 0.75, 1.35) if horizontal_speed > 0.08 else 1.0
+
+
+func _select_animation_name(horizontal_speed: float) -> String:
+	var names := animation_player.get_animation_list()
+	var intent := "idle" if horizontal_speed <= 0.08 else "walk"
+	for animation_name in names:
+		var lowered := String(animation_name).to_lower()
+		if lowered.contains(intent):
+			return String(animation_name)
+	if horizontal_speed > 0.08:
+		for animation_name in names:
+			var lowered := String(animation_name).to_lower()
+			if lowered.contains("run") or lowered.contains("move"):
+				return String(animation_name)
+	for animation_name in names:
+		if String(animation_name) != "RESET":
+			return String(animation_name)
+	return String(names[0])
 
 
 func _add_fallback_limbs(coat: StandardMaterial3D, leather: StandardMaterial3D) -> void:
