@@ -2,10 +2,9 @@
 
 Topogenesis explores biologically grounded, pressure-driven cognition for
 artificial life. Agents self-maintain under energy, bodily, social, and
-predictive instability; affect emerges as continuous viability pressure;
-communication is modeled as intervention on another agent's world model; and
+predictive instability; affect emerges as continuous viability pressure; and
 behavior is shaped by embodied costs, memory, field dynamics, development, and
-evolutionary pressure.
+environmental pressure.
 
 ## Core Claim
 
@@ -27,8 +26,8 @@ compensates.
 - Communication is a social intervention on another agent's predictive state.
 - Intelligence pays embodied costs through energy, damage, memory, and field
   stability.
-- Evolution should select pressure-management strategies, not only fixed action
-  parameters.
+- Architecture should expose pressure-management strategies through metrics and
+  ablations instead of hiding them in opaque controller behavior.
 - Claims must remain measurable through metrics, ablations, baselines, and
   reproducible runs.
 - Every subsystem should satisfy the functional role contracts in
@@ -41,7 +40,6 @@ Topogenesis does not currently claim:
 
 - proven open-ended evolution
 - biological realism in the strong scientific sense
-- AAA-ready game AI middleware
 - scalable large-population cognition
 - fully JAX-pure execution
 - deterministic replay compatibility
@@ -57,8 +55,8 @@ The thesis becomes stronger only if future runs show measurable effects:
 - Communication changes listener beliefs, future behavior, and social memory in
   measurable ways.
 - Future simulation improves action selection under hazard/resource pressure.
-- Population runs preserve diversity instead of converging to one brittle tactic.
-- Descendants inherit different pressure-management styles that affect survival.
+- Larger runs preserve stability instead of converging to one brittle tactic.
+- Refactors reduce runtime cost without changing measured behavior.
 - Long runs avoid NaNs, runaway fields, unbounded memory growth, and immediate
   extinction.
 
@@ -75,27 +73,11 @@ Topogenesis should be compared against:
 - agents with scripted discrete emotion tags
 - standard RL or behavior-tree baselines where practical
 
-## RPG Interpretation
-
-As an RPG system, Topogenesis is best understood as cognition middleware for
-living-world simulation, not as a full game engine. Its natural role is to model:
-
-- NPC needs and pressure
-- affective instability
-- rumor and belief propagation
-- social memory and reputation
-- anticipation and hesitation
-- cooperation, distrust, and deception
-- faction and culture-like dynamics
-
-The intended result is not prettier dialogue trees. It is NPC behavior shaped by
-self-maintenance, uncertainty, memory, social pressure, and simulated futures.
-
 ## North Star
 
 The long-term goal is a self-maintaining artificial-life laboratory where agents
-survive, learn, reproduce, mutate, remember, communicate, alter their
-environment, and evolve under measurable ecological pressure.
+survive, learn, remember, communicate, maintain internal stability, and remain
+measurable under environmental pressure.
 
 The open question is whether pressure-driven cognition can produce richer,
 longer-lived, and more diverse agent behavior than scripts, reflexes, or pure

@@ -1,3 +1,3 @@
 """Topogenesis embodied artificial-life platform."""
 
-__all__ = ["core", "analysis", "engine", "npc"]
+__all__ = ["core", "analysis", "engine"]
