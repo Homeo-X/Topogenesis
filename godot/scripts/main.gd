@@ -21,8 +21,8 @@ var using_offline_snapshot := false
 const MEDIEVAL_ASSET_ROOT := "res://assets/quaternius/medieval_village/glTF/"
 const PROP_ASSET_ROOT := "res://assets/quaternius/fantasy_props/Exports/glTF/"
 const NATURE_ASSET_ROOT := "res://assets/quaternius/stylized_nature/glTF/"
-const WORLD_HALF_EXTENT := 120.0
-const GROUND_SIZE := 240.0
+const WORLD_HALF_EXTENT := 180.0
+const GROUND_SIZE := 360.0
 
 
 func _ready() -> void:

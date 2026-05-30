@@ -86,7 +86,7 @@ class WorldState:
         "materials": 300.0,
     })
     carrying_capacity: int = 800
-    half_extent: float = 160.0
+    half_extent: float = 220.0
     rng_seed: int = 0
 
     @classmethod
@@ -95,24 +95,78 @@ class WorldState:
             clock=WorldClock(ticks_per_day=ticks_per_day),
             rng_seed=seed,
             locations=[
-                Location.make("hearth", "home", (0.0, 0.0), radius=15.0, social_pull=0.30),
-                Location.make("north_hamlet", "home", (-62.0, 58.0), radius=14.0, social_pull=0.22),
-                Location.make("river_hamlet", "home", (76.0, 34.0), radius=14.0, social_pull=0.20),
-                Location.make("market", "social", (9.0, -4.0), radius=15.0, social_pull=0.70),
-                Location.make("chapel_green", "social", (-52.0, 48.0), radius=12.0, social_pull=0.50),
-                Location.make("river_mill", "social", (82.0, 30.0), radius=12.0, social_pull=0.42),
-                Location.make("south_fields", "food", (35.0, 24.0), radius=22.0, resource_rate=3.0, stock=700.0, capacity=900.0, regen_rate=5.0),
-                Location.make("north_barley", "food", (-72.0, 76.0), radius=20.0, resource_rate=2.6, stock=520.0, capacity=720.0, regen_rate=4.2),
-                Location.make("orchard", "food", (-42.0, -64.0), radius=18.0, resource_rate=2.1, stock=360.0, capacity=520.0, regen_rate=3.4),
-                Location.make("hunting_wood", "food", (96.0, -72.0), radius=28.0, resource_rate=1.5, stock=420.0, capacity=680.0, regen_rate=2.1, danger=0.22, damage_rate=0.10, hazard_kind="wildlife"),
-                Location.make("mushroom_grove", "food", (-106.0, -36.0), radius=16.0, resource_rate=1.7, stock=260.0, capacity=400.0, regen_rate=2.8, danger=0.18, confusion_rate=0.22, hazard_kind="toxins"),
-                Location.make("river", "water", (-6.0, 72.0), radius=18.0, resource_rate=2.5, stock=900.0, capacity=1_200.0, regen_rate=8.0),
+                # Small-band home sites. These replace the single-village pull
+                # with several local hearths for early hominin style groups.
+                Location.make("ember_camp", "home", (0.0, 0.0), radius=12.0, social_pull=0.26),
+                Location.make("river_cave", "home", (-86.0, 62.0), radius=12.0, social_pull=0.25),
+                Location.make("ridge_shelter", "home", (92.0, 58.0), radius=12.0, social_pull=0.24),
+                Location.make("birch_camp", "home", (-132.0, -24.0), radius=12.0, social_pull=0.23),
+                Location.make("southern_hearth", "home", (42.0, -116.0), radius=12.0, social_pull=0.24),
+                Location.make("mammoth_bluff", "home", (154.0, -76.0), radius=12.0, social_pull=0.22),
+                Location.make("stone_ring", "home", (-42.0, -148.0), radius=12.0, social_pull=0.22),
+                Location.make("willow_bank", "home", (142.0, 20.0), radius=12.0, social_pull=0.23),
+                Location.make("flint_hollow", "home", (-160.0, 112.0), radius=12.0, social_pull=0.22),
+                Location.make("red_cliff_camp", "home", (8.0, 152.0), radius=12.0, social_pull=0.24),
+                Location.make("ash_grove_camp", "home", (176.0, 132.0), radius=12.0, social_pull=0.21),
+                Location.make("fen_edge_camp", "home", (-116.0, -132.0), radius=12.0, social_pull=0.20),
+                Location.make("sunken_cave", "home", (-204.0, -18.0), radius=11.0, social_pull=0.20),
+                Location.make("eagle_ledge", "home", (206.0, -12.0), radius=11.0, social_pull=0.20),
+                Location.make("fern_shelter", "home", (-72.0, 176.0), radius=11.0, social_pull=0.21),
+                Location.make("bone_hearth", "home", (82.0, 188.0), radius=11.0, social_pull=0.21),
+                Location.make("low_marsh_camp", "home", (-196.0, -176.0), radius=11.0, social_pull=0.18),
+                Location.make("dry_creek_camp", "home", (196.0, -174.0), radius=11.0, social_pull=0.18),
+                Location.make("mist_cave", "home", (-28.0, 206.0), radius=11.0, social_pull=0.20),
+                Location.make("split_oak_camp", "home", (188.0, 72.0), radius=11.0, social_pull=0.20),
+                Location.make("lichen_shelter", "home", (-188.0, 68.0), radius=11.0, social_pull=0.20),
+                Location.make("ravine_hearth", "home", (22.0, -204.0), radius=11.0, social_pull=0.19),
+                Location.make("deer_track_camp", "home", (116.0, -196.0), radius=11.0, social_pull=0.19),
+                Location.make("amber_bank", "home", (-102.0, 202.0), radius=11.0, social_pull=0.20),
+
+                # Local gathering sites. Each band can seek its nearest social
+                # place instead of all agents converging on one market.
+                Location.make("ember_story_circle", "social", (9.0, -4.0), radius=11.0, social_pull=0.68),
+                Location.make("river_story_circle", "social", (-78.0, 72.0), radius=10.0, social_pull=0.62),
+                Location.make("ridge_story_circle", "social", (82.0, 70.0), radius=10.0, social_pull=0.60),
+                Location.make("birch_story_circle", "social", (-140.0, -10.0), radius=10.0, social_pull=0.58),
+                Location.make("southern_story_circle", "social", (52.0, -106.0), radius=10.0, social_pull=0.58),
+                Location.make("bluff_story_circle", "social", (144.0, -66.0), radius=10.0, social_pull=0.56),
+                Location.make("stone_story_circle", "social", (-34.0, -138.0), radius=10.0, social_pull=0.56),
+                Location.make("willow_story_circle", "social", (132.0, 32.0), radius=10.0, social_pull=0.56),
+                Location.make("ledge_story_circle", "social", (198.0, -2.0), radius=9.0, social_pull=0.52),
+                Location.make("fern_story_circle", "social", (-66.0, 166.0), radius=9.0, social_pull=0.54),
+                Location.make("bone_story_circle", "social", (74.0, 178.0), radius=9.0, social_pull=0.54),
+                Location.make("marsh_story_circle", "social", (-186.0, -166.0), radius=9.0, social_pull=0.48),
+                Location.make("creek_story_circle", "social", (186.0, -164.0), radius=9.0, social_pull=0.48),
+                Location.make("mist_story_circle", "social", (-18.0, 196.0), radius=9.0, social_pull=0.52),
+                Location.make("ravine_story_circle", "social", (30.0, -194.0), radius=9.0, social_pull=0.50),
+                Location.make("amber_story_circle", "social", (-96.0, 192.0), radius=9.0, social_pull=0.52),
+
+                # Food is regionally distributed so bands forage locally unless
+                # pressure becomes severe enough to travel farther.
+                Location.make("berry_thicket", "food", (35.0, 24.0), radius=20.0, resource_rate=2.6, stock=620.0, capacity=760.0, regen_rate=4.8),
+                Location.make("north_nut_grove", "food", (-92.0, 88.0), radius=19.0, resource_rate=2.4, stock=520.0, capacity=680.0, regen_rate=4.1),
+                Location.make("marrow_field", "food", (96.0, -72.0), radius=26.0, resource_rate=1.7, stock=460.0, capacity=680.0, regen_rate=2.2, danger=0.18, damage_rate=0.08, hazard_kind="large_game"),
+                Location.make("mushroom_grove", "food", (-148.0, -42.0), radius=16.0, resource_rate=1.6, stock=300.0, capacity=430.0, regen_rate=2.8, danger=0.16, confusion_rate=0.20, hazard_kind="toxins"),
+                Location.make("root_basin", "food", (-38.0, -166.0), radius=18.0, resource_rate=2.0, stock=420.0, capacity=580.0, regen_rate=3.3),
+                Location.make("reed_eggs", "food", (150.0, 42.0), radius=17.0, resource_rate=2.0, stock=390.0, capacity=540.0, regen_rate=3.4, danger=0.12, damage_rate=0.04, hazard_kind="snakes"),
+                Location.make("highland_hunt", "food", (172.0, 142.0), radius=24.0, resource_rate=1.5, stock=420.0, capacity=640.0, regen_rate=1.9, danger=0.24, damage_rate=0.12, hazard_kind="wildlife"),
+                Location.make("fen_roots", "food", (-124.0, -150.0), radius=18.0, resource_rate=1.8, stock=340.0, capacity=500.0, regen_rate=3.0, danger=0.24, confusion_rate=0.18, hazard_kind="bog"),
+
+                Location.make("north_river", "water", (-6.0, 72.0), radius=18.0, resource_rate=2.6, stock=900.0, capacity=1_200.0, regen_rate=8.0),
                 Location.make("east_spring", "water", (116.0, 20.0), radius=12.0, resource_rate=2.0, stock=420.0, capacity=520.0, regen_rate=4.5),
-                Location.make("quarry", "materials", (-118.0, 88.0), radius=18.0, resource_rate=1.4, stock=350.0, capacity=500.0, regen_rate=0.8, danger=0.25, damage_rate=0.18, hazard_kind="rockfall"),
-                Location.make("fen", "hazard", (72.0, -98.0), radius=30.0, danger=0.90, damage_rate=0.18, confusion_rate=0.30, hazard_kind="disease"),
-                Location.make("old_ruins", "hazard", (112.0, 92.0), radius=22.0, danger=0.58, damage_rate=0.10, confusion_rate=0.45, hazard_kind="uncertainty"),
-                Location.make("wolf_pass", "hazard", (-92.0, -112.0), radius=26.0, danger=0.72, damage_rate=0.30, confusion_rate=0.12, hazard_kind="predation"),
-                Location.make("burnt_wood", "hazard", (18.0, -132.0), radius=20.0, danger=0.46, damage_rate=0.22, confusion_rate=0.20, hazard_kind="scarcity"),
+                Location.make("south_spring", "water", (30.0, -134.0), radius=12.0, resource_rate=2.0, stock=420.0, capacity=520.0, regen_rate=4.5),
+                Location.make("west_creek", "water", (-154.0, -70.0), radius=13.0, resource_rate=1.9, stock=390.0, capacity=520.0, regen_rate=4.1),
+                Location.make("cliff_drip", "water", (166.0, 108.0), radius=10.0, resource_rate=1.6, stock=260.0, capacity=360.0, regen_rate=3.0),
+
+                Location.make("flint_knap_site", "materials", (-118.0, 88.0), radius=16.0, resource_rate=1.4, stock=350.0, capacity=500.0, regen_rate=0.8, danger=0.18, damage_rate=0.12, hazard_kind="rockfall"),
+                Location.make("clay_bank", "materials", (128.0, -20.0), radius=16.0, resource_rate=1.2, stock=300.0, capacity=450.0, regen_rate=0.9),
+                Location.make("bone_pile", "materials", (66.0, -150.0), radius=13.0, resource_rate=1.0, stock=210.0, capacity=320.0, regen_rate=0.6, danger=0.22, damage_rate=0.10, hazard_kind="scavengers"),
+
+                Location.make("fen", "hazard", (72.0, -98.0), radius=30.0, danger=0.82, damage_rate=0.16, confusion_rate=0.30, hazard_kind="disease"),
+                Location.make("old_ruins", "hazard", (112.0, 92.0), radius=22.0, danger=0.54, damage_rate=0.08, confusion_rate=0.45, hazard_kind="uncertainty"),
+                Location.make("wolf_pass", "hazard", (-92.0, -112.0), radius=26.0, danger=0.68, damage_rate=0.26, confusion_rate=0.12, hazard_kind="predation"),
+                Location.make("burnt_wood", "hazard", (18.0, -132.0), radius=20.0, danger=0.44, damage_rate=0.20, confusion_rate=0.20, hazard_kind="scarcity"),
+                Location.make("sinkhole_field", "hazard", (-174.0, 28.0), radius=22.0, danger=0.48, damage_rate=0.22, confusion_rate=0.08, hazard_kind="terrain"),
             ],
         )
 

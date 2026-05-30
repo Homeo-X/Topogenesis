@@ -65,10 +65,7 @@ class OfflineSimulator:
         return self.run_ticks(days * self.world.clock.ticks_per_day)
 
     def snapshot(self, *, visible_limit: int = 48) -> dict:
-        alive_idx = [
-            int(idx) for idx, alive in enumerate(self.population.alive)
-            if bool(alive)
-        ][:max(0, int(visible_limit))]
+        alive_idx = self._visible_indices_by_band(max(0, int(visible_limit)))
         locations = []
         for idx, loc in enumerate(self.world.locations):
             locations.append({
@@ -103,6 +100,8 @@ class OfflineSimulator:
                 "position": _round_vec2(self.population.position[idx]),
                 "target_location": int(self.population.target_location[idx]),
                 "home_location": int(self.population.home_location[idx]),
+                "target_location_name": self.world.locations[int(self.population.target_location[idx])].name,
+                "home_location_name": self.world.locations[int(self.population.home_location[idx])].name,
                 "energy": round(float(self.population.energy[idx]), 4),
                 "hydration": round(float(self.population.hydration[idx]), 4),
                 "bodily_integrity": round(float(self.population.bodily_integrity[idx]), 4),
@@ -113,6 +112,20 @@ class OfflineSimulator:
                 "need_total": round(float(needs.total), 4),
                 "dominant_need": needs.dominant,
             })
+        alive = self.population.alive
+        living_count = int(sum(bool(v) for v in alive))
+        average_affect = (
+            float(self.population.affect_stability[alive].mean())
+            if living_count > 0 else 0.0
+        )
+        if living_count > 0:
+            need_values = [
+                self.population_manager.sample_viability(self.population, idx)[1].total
+                for idx, alive_now in enumerate(alive) if bool(alive_now)
+            ]
+            average_need = float(sum(need_values) / max(1, len(need_values)))
+        else:
+            average_need = 1.0
         return {
             "version": 1,
             "mode": "offline_world",
@@ -125,14 +138,44 @@ class OfflineSimulator:
             "world": {
                 "half_extent": round(float(self.world.half_extent), 4),
                 "carrying_capacity": int(self.world.carrying_capacity),
+                "population": living_count,
+                "visible_population": len(npcs),
+                "band_count": len({int(self.population.home_location[idx]) for idx, v in enumerate(alive) if bool(v)}),
+                "average_affect": round(average_affect, 4),
+                "average_need": round(average_need, 4),
                 "food_stock": self.world.stock_fraction("food"),
                 "water_stock": self.world.stock_fraction("water"),
                 "material_stock": self.world.stock_fraction("materials"),
+                "food_ratio": self.world.stock_fraction("food"),
+                "water_ratio": self.world.stock_fraction("water"),
             },
             "locations": locations,
             "npcs": npcs,
             "summary": self.metrics.summarize().__dict__,
         }
+
+    def _visible_indices_by_band(self, visible_limit: int) -> list[int]:
+        """Sample visible NPCs across home bands instead of first-id crowding."""
+        if visible_limit <= 0:
+            return []
+        by_home: dict[int, list[int]] = {}
+        for idx, alive in enumerate(self.population.alive):
+            if not bool(alive):
+                continue
+            home = int(self.population.home_location[idx])
+            by_home.setdefault(home, []).append(int(idx))
+        if not by_home:
+            return []
+        ordered_homes = sorted(by_home)
+        selected: list[int] = []
+        cursor = 0
+        while len(selected) < visible_limit and any(by_home.values()):
+            home = ordered_homes[cursor % len(ordered_homes)]
+            bucket = by_home[home]
+            if bucket:
+                selected.append(bucket.pop(0))
+            cursor += 1
+        return selected
 
     def save(self, path: str | Path) -> None:
         payload = {

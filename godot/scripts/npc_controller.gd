@@ -10,7 +10,7 @@ extends CharacterBody3D
 @export var snapshot_controlled := false
 
 const CHARACTER_ASSET_ROOT := "res://assets/quaternius/animated_characters/Ultimate Animated Character Pack - Nov 2019/FBX/"
-const WORLD_HALF_EXTENT := 118.0
+const WORLD_HALF_EXTENT := 176.0
 const RESOURCE_CENTER := Vector3(-28.0, 0.0, -22.0)
 const HAZARD_CENTER := Vector3(31.0, 0.0, -26.0)
 const NPC_COLLISION_LAYER := 2

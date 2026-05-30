@@ -72,6 +72,7 @@ class OfflineWorldTests(unittest.TestCase):
         world = WorldState.default(ticks_per_day=24, seed=2)
 
         self.assertGreaterEqual(world.carrying_capacity, 800)
+        self.assertGreaterEqual(len([loc for loc in world.locations if loc.kind == "home"]), 20)
         self.assertGreaterEqual(len([loc for loc in world.locations if loc.kind == "food"]), 5)
         self.assertGreaterEqual(len([loc for loc in world.locations if loc.kind == "hazard"]), 4)
 
@@ -93,6 +94,38 @@ class OfflineWorldTests(unittest.TestCase):
         self.assertGreater(float(profile["danger"][0]), 0.0)
         self.assertGreater(float(profile["confusion"][0]), 0.0)
         self.assertGreaterEqual(float(profile["damage"][0]), 0.0)
+
+    def test_population_spawns_as_small_bands(self):
+        world = WorldState.default(ticks_per_day=24, seed=9)
+        manager = PopulationManager(
+            PopulationConfig(initial_population=240, max_population=300),
+            seed=9,
+        )
+        batch = manager.create_population(world)
+
+        home_counts = {}
+        for home in batch.home_location.tolist():
+            home_counts[int(home)] = home_counts.get(int(home), 0) + 1
+
+        self.assertGreaterEqual(len(home_counts), 20)
+        self.assertLessEqual(max(home_counts.values()), 14)
+
+    def test_snapshot_samples_across_bands(self):
+        sim = OfflineSimulator(
+            world=WorldState.default(ticks_per_day=24, seed=12),
+            population_manager=PopulationManager(
+                PopulationConfig(initial_population=240, max_population=300),
+                seed=12,
+            ),
+            config=OfflineConfig(ticks_per_day=24, metrics_interval=24, seed=12),
+        )
+        sim.run_ticks(1)
+        snapshot = sim.snapshot(visible_limit=48)
+
+        homes = {npc["home_location"] for npc in snapshot["npcs"]}
+        self.assertGreaterEqual(len(homes), 20)
+        self.assertEqual(snapshot["world"]["visible_population"], len(snapshot["npcs"]))
+        self.assertGreaterEqual(snapshot["world"]["band_count"], 20)
 
 
 if __name__ == "__main__":

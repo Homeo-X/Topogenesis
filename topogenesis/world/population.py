@@ -15,6 +15,8 @@ from .world_state import WorldState
 class PopulationConfig:
     initial_population: int = 120
     max_population: int = 300
+    band_size_min: int = 6
+    band_size_max: int = 14
     active_fraction: float = 0.15
     active_update_interval: int = 1
     background_update_interval: int = 8
@@ -62,8 +64,15 @@ class NPCBatch:
         home_indices = np.asarray([
             idx for idx, loc in enumerate(world.locations) if loc.kind == "home"
         ], dtype=np.int32)
-        home_idx = rng.choice(home_indices if len(home_indices) else np.asarray([0]), size=count).astype(np.int32)
-        jitter = rng.normal(0.0, 7.0, size=(count, 2)).astype(np.float32)
+        home_pool = home_indices if len(home_indices) else np.asarray([0], dtype=np.int32)
+        if len(home_pool) > 1:
+            home_idx = np.resize(home_pool, count).astype(np.int32)
+            rng.shuffle(home_idx)
+        else:
+            home_idx = np.full(count, int(home_pool[0]), dtype=np.int32)
+        angles = rng.uniform(0.0, 2.0 * np.pi, size=count)
+        radii = rng.uniform(1.2, 4.8, size=count)
+        jitter = np.stack([np.cos(angles) * radii, np.sin(angles) * radii], axis=1).astype(np.float32)
         position = loc_positions[home_idx] + jitter
         return cls(
             ids=np.arange(count, dtype=np.int32),
@@ -238,9 +247,6 @@ class PopulationManager:
         return self._metrics(world, batch, need_total)
 
     def _choose_targets(self, world: WorldState, batch: NPCBatch, need_total: np.ndarray) -> None:
-        material_idx = world.nearest_location_index(np.zeros(2, dtype=np.float32), "materials")
-        social_idx = world.nearest_location_index(np.zeros(2, dtype=np.float32), "social")
-        home_idx = world.nearest_location_index(np.zeros(2, dtype=np.float32), "home")
         hunger_pressure = 1.0 - batch.energy
         thirst_pressure = 1.0 - batch.hydration
         hungry = batch.energy < 0.70
@@ -258,9 +264,13 @@ class PopulationManager:
         for idx in np.flatnonzero(water_priority):
             batch.target_location[idx] = world.best_resource_location_index(batch.position[idx], "water")
         urgent_viability = food_priority | water_priority
-        batch.target_location = np.where(damaged & ~urgent_viability, material_idx, batch.target_location)
-        batch.target_location = np.where(isolated & ~(urgent_viability | damaged), social_idx, batch.target_location)
-        batch.target_location = np.where(unsafe, home_idx, batch.target_location)
+        for idx in np.flatnonzero(damaged & ~urgent_viability):
+            batch.target_location[idx] = world.nearest_location_index(batch.position[idx], "materials")
+        for idx in np.flatnonzero(isolated & ~(urgent_viability | damaged)):
+            home_pos = world.locations[int(batch.home_location[idx])].position
+            batch.target_location[idx] = world.nearest_location_index(home_pos, "social")
+        for idx in np.flatnonzero(unsafe):
+            batch.target_location[idx] = int(batch.home_location[idx])
         calm = (need_total < 0.22) & (self.rng.random(batch.size) < 0.02)
         batch.target_location = np.where(calm, batch.home_location, batch.target_location)
 
@@ -269,8 +279,28 @@ class PopulationManager:
         delta = targets - batch.position
         distance = np.linalg.norm(delta, axis=1, keepdims=True) + 1e-6
         direction = delta / distance
-        speed = self.config.movement_rate * np.clip(batch.energy[:, None] + 0.15, 0.15, 1.0)
-        batch.position = batch.position + direction * speed * batch.alive[:, None]
+        arrival = np.clip(distance / 5.0, 0.15, 1.0)
+        separation = self._local_separation(batch)
+        heading = direction + separation
+        heading_norm = np.linalg.norm(heading, axis=1, keepdims=True) + 1e-6
+        heading = heading / heading_norm
+        speed = self.config.movement_rate * np.clip(batch.energy[:, None] + 0.15, 0.15, 1.0) * arrival
+        batch.position = batch.position + heading * speed * batch.alive[:, None]
+        extent = float(world.half_extent)
+        batch.position = np.clip(batch.position, -extent, extent)
+
+    def _local_separation(self, batch: NPCBatch) -> np.ndarray:
+        """Short-range repulsion keeps bands readable instead of stacked."""
+        if batch.size < 2:
+            return np.zeros_like(batch.position, dtype=np.float32)
+        delta = batch.position[:, None, :] - batch.position[None, :, :]
+        dist = np.linalg.norm(delta, axis=2) + np.eye(batch.size, dtype=np.float32)
+        same_target = batch.target_location[:, None] == batch.target_location[None, :]
+        close = (dist > 1e-5) & (dist < 2.8) & same_target & batch.alive[:, None] & batch.alive[None, :]
+        strength = np.where(close, (2.8 - dist) / 2.8, 0.0).astype(np.float32)
+        push = np.sum(delta / dist[:, :, None] * strength[:, :, None], axis=1)
+        norm = np.linalg.norm(push, axis=1, keepdims=True) + 1e-6
+        return 0.55 * push / norm
 
     def _handle_social_resonance(self, batch: NPCBatch) -> None:
         if batch.size < 2:
