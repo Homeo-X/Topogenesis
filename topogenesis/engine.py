@@ -5087,6 +5087,9 @@ def main(argv=None):
     parser.add_argument('--world_size',       type=int,   default=32)
     parser.add_argument('--seed',             type=int,   default=0)
     parser.add_argument('--log_every',        type=int,   default=50)
+    parser.add_argument('--max_population',   type=int,   default=64,
+                        help='Hard cap on live agents, combined with the '
+                             'physical-capacity gate. Bounds memory on long runs.')
     parser.add_argument('--checkpoint_every', type=int,   default=0,
                         help='Save checkpoint every N steps. 0=disabled.')
     parser.add_argument('--checkpoint_path',  type=str,   default='ckpt',
@@ -5143,7 +5146,7 @@ def main(argv=None):
         world_volume = world.size[0] * world.size[1] * world.size[2]
         unit_vol = max(1.0, cog.interaction_radius ** 3)
         physical_capacity = world_volume / unit_vol
-        if len(agents) >= physical_capacity:
+        if len(agents) >= min(physical_capacity, args.max_population):
             return None
         if body.repro_cooldown > 0:
             body.repro_cooldown -= 1
@@ -5169,7 +5172,9 @@ def main(argv=None):
         ], dtype=np.float32)
         child_pos = np.clip(child_pos + offset, [0, 0, 1], [s - 1e-3 for s in world.size])
         rng, child_rng = random.split(rng)
-        child_idx = len(agents) + births
+        # Unique, monotonic uid: seeds the child's RNG and must never collide,
+        # unlike a population index that shifts as agents die.
+        child_idx = args.agents + births
         child_agent = agent.spawn_offspring(
             child_rng, child_idx, cog.offspring_mutation_sigma)
         child_body = AgentBodyPhys(start_pos=tuple(child_pos),
@@ -5190,7 +5195,7 @@ def main(argv=None):
         agent.genome_field_iface.write_offspring_genome(
             child_agent.genome, child_body, field)
         print(
-            f"[topogenesis] Birth parent={idx} child={child_idx} "
+            f"[topogenesis] Birth parent={idx} child_uid={child_idx} "
             f"generation={child_body.generation} lineage={child_body.lineage_id}"
         )
         return child_agent, child_body
@@ -5218,11 +5223,11 @@ def main(argv=None):
     metric_hist = [[] for _ in range(args.agents)]
 
     # ── Serialization helpers ────────────────────────────────────────────────
-    def save_checkpoint(path: str):
+    def save_checkpoint(path: str, step_num: int = 0):
         """Persist population state for later resumption."""
         import pickle
         state = {
-            'step': step if 'step' in dir() else 0,
+            'step': step_num,
             'births': births,
             'rng': np.array(rng),
             'bodies': [
@@ -5348,6 +5353,10 @@ def main(argv=None):
             metric_hist.pop(i)
 
         for child_agent, child_body in pending_births:
+            # Several parents can pass the gate in one step; re-check the cap
+            # here so the population never overshoots it.
+            if len(agents) >= args.max_population:
+                break
             agents.append(child_agent)
             bodies.append(child_body)
             action_bufs.append(np.zeros(MAX_MOTORS))
@@ -5356,7 +5365,7 @@ def main(argv=None):
 
         # ── Periodic checkpoint ──────────────────────────────────────────────
         if args.checkpoint_every > 0 and step > 0 and step % args.checkpoint_every == 0:
-            save_checkpoint(f'{args.checkpoint_path}.step{step}.pkl')
+            save_checkpoint(f'{args.checkpoint_path}.step{step}.pkl', step)
 
         if step % args.log_every == 0:
             elapsed = time.time() - t_start
@@ -5391,7 +5400,7 @@ def main(argv=None):
 
     print("[topogenesis] Done.")
     if args.checkpoint_every > 0:
-        save_checkpoint(f'{args.checkpoint_path}.final.pkl')
+        save_checkpoint(f'{args.checkpoint_path}.final.pkl', args.steps)
     if not agents:
         print("[topogenesis] Population extinct.")
         return [], world
