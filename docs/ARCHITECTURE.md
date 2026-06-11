@@ -7,9 +7,10 @@ Topogenesis is organized around five layers.
 Owns terrain, resources, hazards, field physics, gravity, collisions, and
 world-state interfaces.
 
-Target modules:
+Modules:
 
-- stable engine base: integrated reference world in `topogenesis.engine`
+- stable engine base: `topogenesis.world.world3d` (with field physics in
+  `topogenesis.fields.sigma`)
 - RPG branch: offline world/population simulator in `topogenesis.world`
 
 ## 2. Body Layer
@@ -17,54 +18,54 @@ Target modules:
 Owns morphology, sensors, motors, energy, membrane integrity, repair,
 structural integrity, and interoception.
 
-Target modules:
+Modules:
 
-- `topogenesis.body.body_state`
-- `topogenesis.body.morphology`
-- `topogenesis.body.metabolism`
-- `topogenesis.body.membrane`
-- `topogenesis.body.sensors`
+- `topogenesis.body.body_state` (body physics, metabolism, rich body state,
+  observation vector)
+- future splits: `morphology`, `membrane`, `sensors`
 
 ## 3. Cognitive Layer
 
 Owns perception, attention, world model, memory, symbolic abstraction, affect,
 drives, policy, planner, and action composition.
 
-Target modules:
+Modules:
 
-- `topogenesis.cognition.agent`
-- `topogenesis.cognition.encoder`
-- `topogenesis.cognition.world_model`
-- `topogenesis.cognition.policy`
-- `topogenesis.cognition.workspace`
-- `topogenesis.cognition.affect`
-- `topogenesis.cognition.memory`
-- `topogenesis.cognition.symbolic`
+- `topogenesis.cognition.agent` (the integrated agent)
+- `topogenesis.cognition.pressure` (viability pressure, needs, affect,
+  social-pressure primitives)
+- `topogenesis.cognition.networks` (world model, policy, workspace, memory,
+  and symbolic primitives)
+- future splits of `networks`: `encoder`, `world_model`, `policy`,
+  `workspace`, `affect`, `memory`, `symbolic`
 
 ## 4. Development And Genome Layer
 
 Owns genotype, mutation, recombination, body-plan decoding, developmental
 stages, lineage identity, and inherited priors.
 
-Target modules:
+Modules:
 
-- `topogenesis.evolution.genome`
-- `topogenesis.evolution.mutation`
-- `topogenesis.evolution.reproduction`
-- `topogenesis.evolution.development`
-- `topogenesis.evolution.lineage`
+- `topogenesis.evolution.genome` (genome, heredity, development,
+  genome-field interface)
+- future splits: `mutation`, `reproduction`, `development`, `lineage`
 
 ## 5. Experiment Layer
 
 Owns reproducible runs, presets, ablations, logging, checkpoints, metrics,
 visualization, and pass/fail conditions.
 
-Target modules:
+Modules:
 
 - `experiments.run`
+- `topogenesis.run_loop` (reference population loop and CLI)
 - `topogenesis.analysis.metrics`
-- `topogenesis.analysis.plots`
-- `topogenesis.analysis.oee_score`
+- future: `topogenesis.analysis.plots`, `topogenesis.analysis.oee_score`
+
+Shared configuration lives in `topogenesis.config`, and shared dimension
+constants in `topogenesis.constants`. `topogenesis.engine` remains as a
+compatibility facade that re-exports every public name, so existing imports
+and `python -m topogenesis.engine` keep working.
 
 ## Project Rule
 

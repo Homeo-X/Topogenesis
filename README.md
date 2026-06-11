@@ -24,15 +24,18 @@ cognitive, field, developmental, and evolutionary mechanisms should be treated
 as experimental hypotheses until validated by ablations, baselines, and
 long-run metrics.
 
-The integrated reference engine lives at `topogenesis/engine.py`. The surrounding
-package provides experiment presets, metrics contracts, cognition primitives,
-and a target module layout so every subsystem can become separable, testable,
-ablatable, and measurable.
+The engine is organized into layered modules (`topogenesis.constants`,
+`topogenesis.config`, `topogenesis.fields`, `topogenesis.body`,
+`topogenesis.world`, `topogenesis.evolution`, `topogenesis.cognition`,
+`topogenesis.run_loop`); `topogenesis/engine.py` remains as a compatibility
+facade re-exporting every public name. The surrounding package provides
+experiment presets, metrics contracts, and per-module tests so every
+subsystem can become separable, testable, ablatable, and measurable.
 
 ## Platform Focus
 
-The stable base keeps pressure-cognition compatibility inside
-`topogenesis/engine.py`. The standalone `topogenesis.npc` package now belongs to
+The stable base keeps pressure-cognition compatibility behind the
+`topogenesis.engine` facade. The standalone `topogenesis.npc` package now belongs to
 `game-rpg`, where it supports villager cognition and bridge behavior.
 
 The offline population/world simulator has moved out of `main`. It now belongs
@@ -91,7 +94,8 @@ defaults to 2,000 steps for longer stability checks without slowing every push.
 The current base prioritizes transparency and repeatability:
 
 - core mechanisms are heuristic and under active hardening
-- `topogenesis/engine.py` still contains the integrated reference engine
+- the reference engine now lives in layered modules behind the
+  `topogenesis.engine` facade
 - experiment presets are intentionally explicit and reproducible
 - ablations, dashboards, and baseline agents are planned next
 
