@@ -557,7 +557,7 @@ def get_time_encoding(t_vec: jnp.ndarray,
         return enc[:out_dim]
     return jnp.pad(enc, (0, out_dim - enc.shape[0]))
 
-def xavier(rng: jax.random.KeyArray,
+def xavier(rng: jax.Array,
            shape: Tuple[int, ...],
            scale: float = 1.0) -> jnp.ndarray:
     """Xavier/Glorot uniform initialisation."""
@@ -812,7 +812,7 @@ class InformationalSupervenience:
 
     def apply_workspace_noise(self, ws: jnp.ndarray,
                                quality: float,
-                               rng: jax.random.KeyArray) -> jnp.ndarray:
+                               rng: jax.Array) -> jnp.ndarray:
         """
         Inject noise inversely proportional to workspace substrate quality.
         At quality=1 no noise; at quality=0, workspace is pure noise.
@@ -1070,7 +1070,7 @@ class SigmaFieldGeometric:
 # ─────────────────────────────────────────────────────────────────────────────
 
 class EntityAttention:
-    def __init__(self, config: TopogenesisConfig, rng: jax.random.KeyArray) -> None:
+    def __init__(self, config: TopogenesisConfig, rng: jax.Array) -> None:
         k1, k2, k3 = random.split(rng, 3)
         d = config.cognition.entity_attn_dim
         self.query_W = xavier(k1, (d, 3), 0.5)
@@ -1795,7 +1795,7 @@ class GRUCell:
     _KEYS = ['W_z', 'U_z', 'b_z', 'W_r', 'U_r', 'b_r', 'W_h', 'U_h', 'b_h',
              'mu_W', 'mu_b', 'logvar_W', 'logvar_b']
 
-    def __init__(self, rng: jax.random.KeyArray, input_dim: int,
+    def __init__(self, rng: jax.Array, input_dim: int,
                  hidden_dim: int, stochastic: bool = True) -> None:
         keys = random.split(rng, 13)
         self.W_z   = xavier(keys[0],  (hidden_dim, hidden_dim))
@@ -1820,7 +1820,7 @@ class GRUCell:
             setattr(self, k, p[k])
 
 class HierarchicalGRU:
-    def __init__(self, rng: jax.random.KeyArray, state_dim: int,
+    def __init__(self, rng: jax.Array, state_dim: int,
                  latent_dim: int, output_dim: int,
                  config: TopogenesisConfig) -> None:
         keys = random.split(rng, 6)
@@ -1867,7 +1867,7 @@ class HierarchicalGRU:
 # INFLUENCE TENSOR + ANDERSON SOLVER
 # ─────────────────────────────────────────────────────────────────────────────
 
-def init_A_params(rng: jax.random.KeyArray, state_dim: int,
+def init_A_params(rng: jax.Array, state_dim: int,
                   d_I: int, rank: int) -> dict:
     k1, k2 = random.split(rng)
     return {
@@ -1976,7 +1976,7 @@ def compute_guidance(S, S_dagger, wm_params, A_params,
 # AFFECT ENGINE
 # ─────────────────────────────────────────────────────────────────────────────
 
-def init_affect_params(rng: jax.random.KeyArray,
+def init_affect_params(rng: jax.Array,
                        state_dim: int,
                        config: TopogenesisConfig) -> dict:
     k1, k2, k3, k4, k5 = random.split(rng, 5)
@@ -2012,7 +2012,7 @@ def compute_affect(S, prediction_error, homeostasis_deviation, affect_params,
 class GaussianPolicy:
     _KEYS = ('W1', 'b1', 'mean_W', 'mean_b', 'logstd_W', 'logstd_b')
 
-    def __init__(self, rng: jax.random.KeyArray, latent_dim: int,
+    def __init__(self, rng: jax.Array, latent_dim: int,
                  action_dim: int, config: TopogenesisConfig) -> None:
         hidden = config.cognition.policy_net_hidden
         k      = random.split(rng, 4)
@@ -2059,7 +2059,7 @@ def gaussian_policy_online_loss(params, latent, action, advantage, config):
     lp, entropy = gaussian_policy_log_prob_entropy(latent, action, params)
     return -lax.stop_gradient(advantage) * lp - config.w_entropy * entropy
 
-def init_critic_params(rng: jax.random.KeyArray, state_dim: int,
+def init_critic_params(rng: jax.Array, state_dim: int,
                        hidden: int = 64) -> dict:
     k1, k2 = random.split(rng)
     return {
@@ -2073,7 +2073,7 @@ def critic_forward(S: jnp.ndarray, params: dict) -> jnp.ndarray:
     h = jnp.tanh(S @ params['W1'].T + params['b1'])
     return (h @ params['W2'].T + params['b2']).squeeze(-1)
 
-def init_sensorimotor_params(rng: jax.random.KeyArray,
+def init_sensorimotor_params(rng: jax.Array,
                              state_dim: int,
                              action_dim: int,
                              hidden: int) -> dict:
@@ -2124,7 +2124,7 @@ def wm_online_loss(wm_params: dict,
     return loss, {'mse': jnp.mean((pred - S_now) ** 2),
                   'gate_entropy': gate_ent}
 
-def init_enactive_ac_params(rng: jax.random.KeyArray,
+def init_enactive_ac_params(rng: jax.Array,
                             feature_dim: int,
                             action_dim: int) -> dict:
     k1, k2 = random.split(rng)
@@ -2167,7 +2167,7 @@ def enactive_ac_loss(params: dict,
 class RelationalReasoningNet:
     _KEYS = ('W_a', 'b_a', 'W1', 'b1', 'W2', 'b2', 'W_res')
 
-    def __init__(self, rng: jax.random.KeyArray, concept_dim: int,
+    def __init__(self, rng: jax.Array, concept_dim: int,
                  action_dim: int, proj_dim: int, hidden_dim: int) -> None:
         k = random.split(rng, 7)
         self.W_a  = xavier(k[0], (proj_dim, action_dim))
@@ -2228,7 +2228,7 @@ class DriveSystem:
             0.0, 2.0)
         return self.drives
 
-def init_goal_net_params(rng: jax.random.KeyArray, E_dim: int,
+def init_goal_net_params(rng: jax.Array, E_dim: int,
                          n_drives: int, hidden: int,
                          concept_dim: int = 0, field_dim: int = 0) -> dict:
     k1, k2, k3 = random.split(rng, 3)
@@ -2262,7 +2262,7 @@ def goal_net_predict(S_E, drives, params,
 # GLOBAL WORKSPACE
 # ─────────────────────────────────────────────────────────────────────────────
 
-def init_workspace_params(rng: jax.random.KeyArray, state_dim: int,
+def init_workspace_params(rng: jax.Array, state_dim: int,
                           d_D: int, config: TopogenesisConfig) -> dict:
     k1, k2 = random.split(rng)
     wdim = config.cognition.workspace_dim
@@ -2477,7 +2477,7 @@ class RelationalGraph:
 
 class SparseModularMemory:
     def __init__(self, config: TopogenesisConfig, state_dim: int,
-                 rng: jax.random.KeyArray) -> None:
+                 rng: jax.Array) -> None:
         cog              = config.cognition
         self.config      = config
         self.state_dim   = state_dim
@@ -3535,7 +3535,7 @@ class DevelopmentalDecoder:
     }
     _BASIS_COLS = 32
 
-    def __init__(self, rng: jax.random.KeyArray, genome: Genome):
+    def __init__(self, rng: jax.Array, genome: Genome):
         self._rng_key = rng
         self._basis:       Dict[str, np.ndarray] = {}
         self._basis_sizes: Dict[str, int]        = {}
@@ -3630,7 +3630,7 @@ class ToolRequestBroker:
     MODE_NAMES   = ('ACT', 'IMAGINE', 'QUERY', 'DEFER')
     MAX_DEFER    = 3
 
-    def __init__(self, config: 'TopogenesisConfig', rng: jax.random.KeyArray) -> None:
+    def __init__(self, config: 'TopogenesisConfig', rng: jax.Array) -> None:
         cog      = config.cognition
         feat_dim = cog.workspace_dim + cog.n_drives + 3   # ws ‖ drives ‖ [v, H, ε]
         self.W   = xavier(rng, (4, feat_dim), 0.15)
@@ -3662,7 +3662,7 @@ class ToolRequestBroker:
         return mode
 
     def imagine(self, S_full: jnp.ndarray, wm_params: dict,
-                config: 'TopogenesisConfig', rng: jax.random.KeyArray) -> jnp.ndarray:
+                config: 'TopogenesisConfig', rng: jax.Array) -> jnp.ndarray:
         """Run internal rollout; return imagined terminal state for GRU injection."""
         traj, _, _ = autoregressive_rollout(
             S_full, self._imagine_horizon, wm_params, config,
@@ -3704,7 +3704,7 @@ class TopogenesisAgent:
       16. Memory store (SparseModularMemory)
     """
 
-    def __init__(self, config: TopogenesisConfig, rng: jax.random.KeyArray,
+    def __init__(self, config: TopogenesisConfig, rng: jax.Array,
                  num_agents: int = 1, self_idx: int = 0) -> None:
         self.config   = config
         self.self_idx = self_idx
@@ -4205,7 +4205,7 @@ class TopogenesisAgent:
         }
 
     def _attention_stage(self, obs_jnp: jnp.ndarray,
-                         key_wm: jax.random.KeyArray,
+                         key_wm: jax.Array,
                          pump_field: bool) -> dict:
         """Project observations into object slots and update field/causal buses."""
         cog = self.config.cognition
@@ -4270,7 +4270,7 @@ class TopogenesisAgent:
 
     def _world_model_stage(self, S_full: jnp.ndarray, action: np.ndarray,
                            slot_positions: jnp.ndarray,
-                           key_wm: jax.random.KeyArray,
+                           key_wm: jax.Array,
                            wm_pred_mse: float) -> dict:
         """Run field-conditioned predictive dynamics and update hidden state."""
         cog = self.config.cognition
@@ -4364,7 +4364,7 @@ class TopogenesisAgent:
         }
 
     def _motor_stage(self, ws_final: jnp.ndarray, drives: jnp.ndarray,
-                     key_pol: jax.random.KeyArray, S_full: jnp.ndarray,
+                     key_pol: jax.Array, S_full: jnp.ndarray,
                      obs_jnp: jnp.ndarray, viability_features: jnp.ndarray,
                      organism_obs: dict, survival_pressure: float,
                      dev_stage: int, world_summary: dict, peer_summary: dict,
@@ -4551,7 +4551,7 @@ class TopogenesisAgent:
         return state
 
     def step(self, S0: np.ndarray, action: np.ndarray,
-             reward: float = 0.0, rng: Optional[jax.random.KeyArray] = None,
+             reward: float = 0.0, rng: Optional[jax.Array] = None,
              external_field: Optional[SigmaFieldGeometric] = None,
              pump_field: bool = True) -> Tuple[np.ndarray, dict]:
         if rng is None:
@@ -5184,7 +5184,7 @@ class TopogenesisAgent:
         }
         return snap
 
-    def spawn_offspring(self, rng: jax.random.KeyArray,
+    def spawn_offspring(self, rng: jax.Array,
                         self_idx: int,
                         mutation_sigma: Optional[float] = None,
                         other_parent: Optional['TopogenesisAgent'] = None):
