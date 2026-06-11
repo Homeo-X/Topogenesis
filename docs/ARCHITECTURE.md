@@ -74,3 +74,19 @@ Target modules:
 Topogenesis is a standalone project. Core runtime code lives under `topogenesis/`, and
 experiments live under `experiments/`. Each extracted subsystem must preserve a
 smoke run, expose metrics, and receive at least one direct unit test.
+
+## Landed Module Layout
+
+The reference engine has been decomposed into layered modules:
+
+- `topogenesis.constants`, `topogenesis.config`
+- `topogenesis.fields.sigma` (PDE kernel, reservoir, sigma-field geometry)
+- `topogenesis.body.body_state`
+- `topogenesis.world.world3d` (alongside the offline world simulator)
+- `topogenesis.evolution.genome`
+- `topogenesis.cognition.networks` and `topogenesis.cognition.agent`
+- `topogenesis.run_loop` (reference loop and CLI)
+
+`topogenesis.engine` remains as a compatibility facade re-exporting every
+public name, so existing imports and `python -m topogenesis.engine` keep
+working. The finer-grained targets listed above remain future splits.
