@@ -738,6 +738,27 @@ def stable_step_field_pde(field, agent_positions_arr, energies_arr,
     projected = new_phi / jnp.maximum(norms, 0.1)
     return jnp.nan_to_num(projected, nan=0.0, posinf=1.0, neginf=-1.0)
 
+def pad_agent_arrays(positions: jnp.ndarray, energies: jnp.ndarray,
+                     min_capacity: int = 8) -> Tuple[jnp.ndarray, jnp.ndarray]:
+    """Pad (N,3)/(N,) agent arrays to the next power-of-two capacity.
+
+    The jitted PDE kernel recompiles for every distinct input shape, so a
+    population that changes size every birth/death forces one XLA compile per
+    N and exhausts memory on long runs. Padding bounds the compiled
+    signatures to {8, 16, 32, ...}. Padding rows carry zero energy, whose
+    pump contribution clip(0, 0, 2) * pump_gain is exactly zero.
+    """
+    n = int(positions.shape[0])
+    cap = max(min_capacity, 1 << (max(1, n) - 1).bit_length())
+    if n == cap:
+        return positions, energies
+    pad = cap - n
+    pos_pad = jnp.concatenate(
+        [positions, jnp.zeros((pad, 3), dtype=positions.dtype)], axis=0)
+    eng_pad = jnp.concatenate(
+        [energies, jnp.zeros((pad,), dtype=energies.dtype)], axis=0)
+    return pos_pad, eng_pad
+
 @jit
 def compute_q_all_z(field: jnp.ndarray) -> jnp.ndarray:
     """Topological charge Q per z-slice via triple scalar product."""
@@ -788,6 +809,8 @@ class SigmaFieldGeometric:
              dt: float = 0.05, D: float = 0.15,
              decay: float = 0.008, pump_gain: float = 0.25) -> float:
         """Advance field one PDE step; returns Rayleigh dissipation."""
+        agent_positions, agent_energies = pad_agent_arrays(
+            agent_positions, agent_energies)
         self.phi      = stable_step_field_pde(
             self.phi, agent_positions, agent_energies, dt, D, decay, pump_gain)
         self._q_all_z = compute_q_all_z(self.phi)
@@ -1232,8 +1255,13 @@ class World3D:
         return reward, body.health <= 0.0 or body.membrane_integrity <= 0.0 or _mean_si < 0.04
 
     def advance_field(self, bodies: List[AgentBodyPhys]) -> None:
-        pos_arr = jnp.array(np.stack([b.pos for b in bodies]), dtype=jnp.float32)
-        eng_arr = jnp.array([b.energy for b in bodies],        dtype=jnp.float32)
+        if bodies:
+            pos_arr = jnp.array(np.stack([b.pos for b in bodies]), dtype=jnp.float32)
+            eng_arr = jnp.array([b.energy for b in bodies],        dtype=jnp.float32)
+        else:
+            # Extinct population: the field still evolves, with no pump.
+            pos_arr = jnp.zeros((0, 3), dtype=jnp.float32)
+            eng_arr = jnp.zeros((0,),   dtype=jnp.float32)
         self.field.step(pos_arr, eng_arr)
         for b in bodies:
             b.last_q_prev = getattr(b, 'last_q', 1.0)
