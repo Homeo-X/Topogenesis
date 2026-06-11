@@ -7,6 +7,10 @@ artificial-life result. These are the current high-priority limits.
 
 - `TopogenesisAgent.step()` remains too large and stateful.
 - JAX and NumPy are mixed in hot paths, limiting JIT compilation.
+- Agent arrays fed to the field kernel are padded to capacity buckets so
+  population changes no longer trigger unbounded XLA recompilation, and
+  `--max_population` bounds reproduction; per-agent Python state still grows
+  linearly with the cap.
 - Several subsystems are heuristic couplings rather than validated mechanisms.
 - Recoverable subsystem failures are now counted in `soft_failure_count`, but
   the next step is replacing broad fallbacks with typed outcomes.

@@ -70,6 +70,8 @@ python -m experiments.run --experiment open_ended_ecology
 ```
 
 Use `--engine-path` only when intentionally testing an alternate engine module.
+Long runs accept `--max_population` (default 64) to bound memory growth from
+reproduction; the weekly extended CI run uses `--max_population 32`.
 
 ## Verification
 
