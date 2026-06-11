@@ -72,7 +72,7 @@ from topogenesis.cognition.networks import (
     SparseModularMemory,
     StateSpace,
     TheoryOfMind,
-    anderson_solver,
+    anderson_deq_joint,
     autoregressive_rollout,
     compute_affect,
     enactive_ac_loss,
@@ -1103,24 +1103,14 @@ class TopogenesisAgent:
         _deter_dim = cog.deter_dim
         _ws_half   = cog.workspace_dim // 2
 
-        def _deq_f_joint(z: jnp.ndarray,
-                         ctx_deter: jnp.ndarray,
-                         ctx_ws: jnp.ndarray) -> jnp.ndarray:
-            deter_z = z[:_deter_dim]
-            ws_z    = z[_deter_dim:]
-            new_deter = jnp.tanh(deter_z + 0.10 * gain * (ctx_deter - deter_z))
-            new_ws    = jnp.tanh(ws_z    + 0.05        * (ctx_ws    - ws_z))
-            return jnp.concatenate([new_deter, new_ws])
-
         _ws_ctx = self.workspace_state[:_ws_half]
         _z0     = jnp.concatenate([self.equilibrium_state, _ws_ctx])
         try:
-            z_joint, _ = anderson_solver(
-                _deq_f_joint, _z0,
-                (self.deter_state[:_deter_dim], _ws_ctx),
-                self._thermo_max_fp_iter, cog.fp_tol,
-                cog.anderson_memory, cog.anderson_ridge,
-                cog.anderson_damping)
+            z_joint, _ = anderson_deq_joint(
+                _z0, self.deter_state[:_deter_dim], _ws_ctx, gain,
+                _deter_dim, self._thermo_max_fp_iter,
+                cog.anderson_memory, cog.fp_tol,
+                cog.anderson_ridge, cog.anderson_damping)
             z_star    = z_joint[:_deter_dim]
             ws_z_star = z_joint[_deter_dim:]
         except Exception as exc:

@@ -568,6 +568,28 @@ def anderson_solver(F, x0, args, max_iter, tol, memory, ridge, damping=0.5):
         jnp.arange(max_iter))
     return x_final, steps
 
+@partial(jit, static_argnums=(4, 5, 6))
+def anderson_deq_joint(z0, ctx_deter, ctx_ws, gain,
+                       deter_dim, max_iter, memory,
+                       tol, ridge, damping):
+    """Joint deterministic/workspace DEQ equilibrium via Anderson mixing.
+
+    A stable jitted entry point: building the residual function as a fresh
+    per-step closure (with gain baked in as a constant) defeated JAX's
+    compilation cache, so every engine step compiled a new copy of the
+    solver until memory ran out. Here gain is traced and only the
+    dimensions/iteration bounds are static.
+    """
+    def F(z, ctx_d, ctx_w, g):
+        deter_z = z[:deter_dim]
+        ws_z    = z[deter_dim:]
+        new_deter = jnp.tanh(deter_z + 0.10 * g * (ctx_d - deter_z))
+        new_ws    = jnp.tanh(ws_z    + 0.05     * (ctx_w - ws_z))
+        return jnp.concatenate([new_deter, new_ws])
+
+    return anderson_solver(F, z0, (ctx_deter, ctx_ws, gain),
+                           max_iter, tol, memory, ridge, damping)
+
 class StateSpace:
     def __init__(self, d_E: int, d_D: int, d_I: int) -> None:
         self.d_E = d_E
