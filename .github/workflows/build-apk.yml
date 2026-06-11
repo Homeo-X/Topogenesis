@@ -52,7 +52,7 @@ jobs:
 
       - name: Build debug APK
         working-directory: mobile/android
-        run: ./gradlew assembleDebug --no-daemon -Dorg.gradle.jvmargs="-Xmx4096m"
+        run: ./gradlew assembleDebug -PbundleInDebug=true --no-daemon -Dorg.gradle.jvmargs="-Xmx4096m"
         env:
           ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
           EXPO_PUBLIC_SUPABASE_URL: https://cswwxwckwaygvfkshupu.supabase.co
