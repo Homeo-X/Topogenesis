@@ -1,0 +1,79 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [claude/homeorealm-mmorpg-build-8gjv55, main]
+    paths:
+      - 'homeorealm/**'
+      - '.github/workflows/build-android-apk.yml'
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: homeorealm
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: homeorealm/package-lock.json
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Accept Android SDK licenses
+        run: yes | sdkmanager --licenses || true
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck sim-core
+        run: npx tsc --noEmit
+        working-directory: homeorealm/packages/sim-core
+
+      - name: Build standalone web app
+        run: npm run build:standalone
+        working-directory: homeorealm/packages/web-client
+
+      - name: Install Capacitor CLI + packages
+        run: |
+          npm install -g @capacitor/cli
+          npm install @capacitor/core @capacitor/android
+        working-directory: homeorealm/packages/web-client
+
+      - name: Add Android platform
+        run: npx cap add android
+        working-directory: homeorealm/packages/web-client
+
+      - name: Sync web assets into Android project
+        run: npx cap sync android
+        working-directory: homeorealm/packages/web-client
+
+      - name: Make gradlew executable
+        run: chmod +x android/gradlew
+        working-directory: homeorealm/packages/web-client
+
+      - name: Build debug APK
+        run: ./gradlew assembleDebug --no-daemon
+        working-directory: homeorealm/packages/web-client/android
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: HomeoRealm-debug-apk
+          path: homeorealm/packages/web-client/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
