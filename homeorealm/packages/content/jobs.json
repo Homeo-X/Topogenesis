@@ -1,0 +1,11 @@
+[
+  { "id": "farmer", "name": "Farmer", "description": "Tends crops and livestock; primary food producer.", "primarySkill": "farming", "produces": ["food"], "settlementNeed": "essential" },
+  { "id": "gatherer", "name": "Gatherer", "description": "Collects wild food, herbs, and wood from surrounding lands.", "primarySkill": "gathering", "produces": ["food", "wood", "medicine"], "settlementNeed": "essential" },
+  { "id": "guard", "name": "Guard", "description": "Protects settlement, patrols roads, defends against threats.", "primarySkill": "combat", "produces": ["security"], "settlementNeed": "essential" },
+  { "id": "crafter", "name": "Crafter", "description": "Produces tools, cloth, and goods from raw materials.", "primarySkill": "crafting", "produces": ["tools", "cloth"], "settlementNeed": "important" },
+  { "id": "healer", "name": "Healer", "description": "Tends the sick; produces and dispenses medicine.", "primarySkill": "medicine", "produces": ["medicine"], "settlementNeed": "important" },
+  { "id": "merchant", "name": "Merchant", "description": "Trades goods between settlements; brings coin and rare items.", "primarySkill": "trade", "produces": ["coin"], "settlementNeed": "important" },
+  { "id": "scholar", "name": "Scholar", "description": "Studies Hearthwell anomalies and teaches skills.", "primarySkill": "scholarship", "produces": ["knowledge"], "settlementNeed": "optional" },
+  { "id": "civic_officer", "name": "Civic Officer", "description": "Maintains public morale and governance functions.", "primarySkill": "governance", "produces": ["publicMorale"], "settlementNeed": "important" },
+  { "id": "adventurer", "name": "Adventurer", "description": "Explores, maps, clears threats, brings rare resources.", "primarySkill": "exploration", "produces": ["security", "ore"], "settlementNeed": "optional" }
+]

@@ -1,0 +1,26 @@
+{
+  "name": "homeorealm-online",
+  "version": "0.1.0",
+  "private": true,
+  "description": "HomeoRealm Online — MMORPG life-simulation kingdom with Homeo-X Topogenesis NPC Civilization",
+  "workspaces": [
+    "packages/sim-core",
+    "packages/server",
+    "packages/web-client"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "validate:content": "npx tsx scripts/validate-content.ts",
+    "demo:sim": "npx tsx scripts/run-demo-simulation.ts",
+    "dev": "concurrently \"npm run dev --workspace=packages/server\" \"npm run dev --workspace=packages/web-client\"",
+    "dev:server": "npm run dev --workspace=packages/server",
+    "dev:client": "npm run dev --workspace=packages/web-client",
+    "lint": "npx tsc --noEmit -p tsconfig.base.json"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "tsx": "^4.11.0",
+    "concurrently": "^8.2.2"
+  }
+}

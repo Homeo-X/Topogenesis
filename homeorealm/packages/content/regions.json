@@ -1,0 +1,58 @@
+[
+  {
+    "id": "crown_valley",
+    "name": "The Crown Valley",
+    "description": "Central pastoral kingdom; farms, markets, marriage houses, academies, public festivals, and royal bureaucracy. Best starting zone.",
+    "climate": "temperate",
+    "mainResources": ["food", "cloth", "coin"],
+    "faction": "hearthwardens"
+  },
+  {
+    "id": "mireglass",
+    "name": "Mireglass Lowlands",
+    "description": "Wetland of reflecting pools that preserve emotional memories. Main zones for herbalism, funeral rites, ghost ecology, and memory quests.",
+    "climate": "humid",
+    "mainResources": ["medicine", "food", "wood"],
+    "faction": "ledger_houses"
+  },
+  {
+    "id": "ash_ring",
+    "name": "The Ash-Ring Marches",
+    "description": "Borderlands around old volcanic ruins. Strong monster ecology, smithing resources, military orders, and expedition gameplay.",
+    "climate": "volcanic",
+    "mainResources": ["ore", "tools", "medicine"],
+    "faction": "votive_smiths"
+  },
+  {
+    "id": "saffron_coast",
+    "name": "Saffron Coast",
+    "description": "Trade ports, fishing guilds, shipwrights, migrant NPC cultures, culinary economy, piracy, and maritime festivals.",
+    "climate": "coastal",
+    "mainResources": ["food", "coin", "cloth"],
+    "faction": "wayfarer_compact"
+  },
+  {
+    "id": "highroot",
+    "name": "Highroot Canopy",
+    "description": "Vertical forest settlements, druidic biotech, animal husbandry, rare woods, archery, and ecological governance.",
+    "climate": "forest",
+    "mainResources": ["wood", "food", "medicine"],
+    "faction": "green_apron_guild"
+  },
+  {
+    "id": "quiet_north",
+    "name": "The Quiet North",
+    "description": "Snow provinces where time feels thin. High-level survival, ancestral spirits, archive temples, winter politics, and rare topogenic minerals.",
+    "climate": "arctic",
+    "mainResources": ["ore", "medicine", "cloth"],
+    "faction": "ledger_houses"
+  },
+  {
+    "id": "subframe_labyrinth",
+    "name": "The Subframe Labyrinth",
+    "description": "Dynamic dungeon layer under all Hearthwells. Its rooms reconfigure according to unresolved social, ecological, and metaphysical pressures.",
+    "climate": "subterranean",
+    "mainResources": ["ore", "medicine"],
+    "faction": "null_choir"
+  }
+]

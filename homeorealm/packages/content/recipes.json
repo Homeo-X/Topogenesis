@@ -1,0 +1,83 @@
+[
+  {
+    "id": "recipe_hearth_bread",
+    "name": "Bake Hearth Bread",
+    "outputItemId": "hearth_bread",
+    "ingredients": [{ "itemId": "ember_grain", "quantity": 2 }],
+    "requiredSkill": "cooking",
+    "minSkillLevel": 0.1,
+    "outputQuantity": 3
+  },
+  {
+    "id": "recipe_root_broth",
+    "name": "Brew Root Broth",
+    "outputItemId": "root_broth",
+    "ingredients": [],
+    "requiredSkill": "cooking",
+    "minSkillLevel": 0.05,
+    "outputQuantity": 2
+  },
+  {
+    "id": "recipe_farm_tools",
+    "name": "Craft Farm Tools",
+    "outputItemId": "farm_tools",
+    "ingredients": [
+      { "itemId": "ash_ore", "quantity": 2 },
+      { "itemId": "highroot_timber", "quantity": 1 }
+    ],
+    "requiredSkill": "crafting",
+    "minSkillLevel": 0.3,
+    "outputQuantity": 1
+  },
+  {
+    "id": "recipe_smithing_hammer",
+    "name": "Forge Smithing Hammer",
+    "outputItemId": "smithing_hammer",
+    "ingredients": [{ "itemId": "ash_ore", "quantity": 4 }],
+    "requiredSkill": "crafting",
+    "minSkillLevel": 0.5,
+    "outputQuantity": 1
+  },
+  {
+    "id": "recipe_healer_kit",
+    "name": "Assemble Healer's Kit",
+    "outputItemId": "healer_kit",
+    "ingredients": [
+      { "itemId": "feverwort", "quantity": 3 },
+      { "itemId": "mirror_moss", "quantity": 1 }
+    ],
+    "requiredSkill": "medicine",
+    "minSkillLevel": 0.4,
+    "outputQuantity": 1
+  },
+  {
+    "id": "recipe_memory_lantern",
+    "name": "Craft Memory Lantern",
+    "outputItemId": "memory_lantern",
+    "ingredients": [
+      { "itemId": "mirror_moss", "quantity": 2 },
+      { "itemId": "highroot_timber", "quantity": 1 }
+    ],
+    "requiredSkill": "crafting",
+    "minSkillLevel": 0.6,
+    "outputQuantity": 1
+  },
+  {
+    "id": "recipe_guard_blade",
+    "name": "Forge Guard's Blade",
+    "outputItemId": "guard_blade",
+    "ingredients": [{ "itemId": "ash_ore", "quantity": 3 }],
+    "requiredSkill": "crafting",
+    "minSkillLevel": 0.45,
+    "outputQuantity": 1
+  },
+  {
+    "id": "recipe_auran_weave",
+    "name": "Weave Auran Cloth",
+    "outputItemId": "auran_weave",
+    "ingredients": [{ "itemId": "crown_wool", "quantity": 3 }],
+    "requiredSkill": "crafting",
+    "minSkillLevel": 0.2,
+    "outputQuantity": 1
+  }
+]
