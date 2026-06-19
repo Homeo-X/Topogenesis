@@ -76,7 +76,7 @@ export function consumeFood(
 
 /** Restoration amounts for non-food needs from actions. */
 export const ACTION_NEED_GAINS: Partial<Record<string, Partial<NPCNeeds>>> = {
-  rest:          { rest: 0.4, stress: undefined },
+  rest:          { rest: 0.4 },
   sleep:         { rest: 0.7 },
   social_visit:  { belonging: 0.3, esteem: 0.1 },
   work_job:      { purpose: 0.3, esteem: 0.1 },

@@ -14,10 +14,6 @@ export function expireQuests(quests: Record<string, EmergentQuest>, currentDay: 
   return updated;
 }
 
-export function getActiveQuests(quests: Record<string, EmergentQuest>): EmergentQuest[] {
-  return Object.values(quests).filter(q => q.isActive);
-}
-
 export function completeQuest(quest: EmergentQuest): EmergentQuest {
   return { ...quest, isActive: false, objectives: quest.objectives.map(o => ({ ...o, completed: true })) };
 }

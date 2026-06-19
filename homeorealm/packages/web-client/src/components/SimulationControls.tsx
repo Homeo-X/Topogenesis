@@ -102,7 +102,7 @@ export function SimulationControls() {
               <span className="event-type">{e.type.replace(/_/g, ' ')}</span>
               <span className="event-actor">{e.actorId ?? '—'}</span>
               <span className="event-salience">{(e.salience * 100).toFixed(0)}%</span>
-              {e.payload?.summary && (
+              {!!e.payload?.summary && (
                 <span className="event-summary">{String(e.payload.summary)}</span>
               )}
             </div>
