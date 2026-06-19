@@ -1,20 +1,38 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { api, type NPCSummary, type NPCFull, type Relationship, type Memory } from '../api.js';
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 640);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 640px)');
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  return isMobile;
+}
 
 export function NPCList() {
   const [npcs, setNpcs] = useState<NPCSummary[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [filter, setFilter] = useState('');
+  const isMobile = useIsMobile();
 
   useEffect(() => { api.getNPCs().then(setNpcs).catch(() => {}); }, []);
 
-  const filtered = npcs.filter(n =>
-    !filter || n.name.toLowerCase().includes(filter.toLowerCase()) ||
-    (n.jobId ?? '').includes(filter.toLowerCase()),
+  const filtered = useMemo(() =>
+    npcs.filter(n =>
+      !filter ||
+      n.name.toLowerCase().includes(filter.toLowerCase()) ||
+      (n.jobId ?? '').toLowerCase().includes(filter.toLowerCase()),
+    ),
+    [npcs, filter],
   );
 
+  const handleSelect = useCallback((id: string) => setSelected(id), []);
+
   return (
-    <div className="npc-panel">
+    <div className={`npc-panel${isMobile && selected ? ' mobile-detail-open' : ''}`}>
       <div className="npc-list-col">
         <h2>Residents ({npcs.length})</h2>
         <input value={filter} onChange={e => setFilter(e.target.value)} placeholder="Filter by name or job..." className="filter-input" />
@@ -23,7 +41,7 @@ export function NPCList() {
             <div
               key={n.id}
               className={`npc-row ${selected === n.id ? 'selected' : ''}`}
-              onClick={() => setSelected(n.id)}
+              onClick={() => handleSelect(n.id)}
             >
               <span className="npc-name">{n.name}</span>
               <span className="npc-job">{n.jobId ?? '—'}</span>
@@ -33,7 +51,13 @@ export function NPCList() {
         </div>
       </div>
       <div className="npc-detail-col">
-        {selected ? <NPCDetail id={selected} /> : <div className="placeholder">Select a resident to view their biography.</div>}
+        {isMobile && selected && (
+          <button className="mobile-back-btn" onClick={() => setSelected(null)}>← Back to residents</button>
+        )}
+        {selected
+          ? <NPCDetail id={selected} />
+          : <div className="placeholder">Select a resident to view their biography.</div>
+        }
       </div>
     </div>
   );
@@ -46,6 +70,7 @@ function NPCDetail({ id }: { id: string }) {
   const [tab, setTab] = useState<'overview' | 'relationships' | 'memories' | 'frame'>('overview');
 
   useEffect(() => {
+    setNpc(null);
     api.getNPC(id).then(setNpc).catch(() => {});
     api.getNPCRelationships(id).then(setRels).catch(() => {});
     api.getNPCMemories(id).then(setMems).catch(() => {});
@@ -76,9 +101,7 @@ function NPCDetail({ id }: { id: string }) {
         <div className="overview-grid">
           <div>
             <h4>Needs</h4>
-            {Object.entries(npc.needs).map(([k, v]) => (
-              <NeedBar key={k} label={k} value={v as number} />
-            ))}
+            {Object.entries(npc.needs).map(([k, v]) => <NeedBar key={k} label={k} value={v as number} />)}
           </div>
           <div>
             <h4>Affect</h4>

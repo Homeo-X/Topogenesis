@@ -1,27 +1,34 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Layout } from './components/Layout.js';
-import { WorldDashboard } from './components/WorldDashboard.js';
-import { NPCList } from './components/NPCProfile.js';
-import { QuestBoard } from './components/QuestBoard.js';
-import { SettlementEconomy } from './components/SettlementEconomy.js';
-import { HouseholdPanel } from './components/HouseholdPanel.js';
-import { LoreCodex } from './components/LoreCodex.js';
-import { SimulationControls } from './components/SimulationControls.js';
-import { DungeonView } from './components/DungeonView.js';
+
+const WorldDashboard  = lazy(() => import('./components/WorldDashboard.js').then(m => ({ default: m.WorldDashboard })));
+const NPCList         = lazy(() => import('./components/NPCProfile.js').then(m => ({ default: m.NPCList })));
+const QuestBoard      = lazy(() => import('./components/QuestBoard.js').then(m => ({ default: m.QuestBoard })));
+const SettlementEconomy = lazy(() => import('./components/SettlementEconomy.js').then(m => ({ default: m.SettlementEconomy })));
+const HouseholdPanel  = lazy(() => import('./components/HouseholdPanel.js').then(m => ({ default: m.HouseholdPanel })));
+const SimulationControls = lazy(() => import('./components/SimulationControls.js').then(m => ({ default: m.SimulationControls })));
+const LoreCodex       = lazy(() => import('./components/LoreCodex.js').then(m => ({ default: m.LoreCodex })));
+const DungeonView     = lazy(() => import('./components/DungeonView.js').then(m => ({ default: m.DungeonView })));
+
+function LoadingFallback() {
+  return <div className="suspense-loading">Loading...</div>;
+}
 
 export function App() {
   const [view, setView] = useState('dashboard');
 
   return (
     <Layout activeView={view} onNavigate={setView}>
-      {view === 'dashboard' && <WorldDashboard />}
-      {view === 'npcs' && <NPCList />}
-      {view === 'quests' && <QuestBoard />}
-      {view === 'settlement' && <SettlementEconomy />}
-      {view === 'households' && <HouseholdPanel />}
-      {view === 'events' && <SimulationControls />}
-      {view === 'lore' && <LoreCodex />}
-      {view === 'dungeons' && <DungeonView />}
+      <Suspense fallback={<LoadingFallback />}>
+        {view === 'dashboard'   && <WorldDashboard />}
+        {view === 'npcs'        && <NPCList />}
+        {view === 'quests'      && <QuestBoard />}
+        {view === 'settlement'  && <SettlementEconomy />}
+        {view === 'households'  && <HouseholdPanel />}
+        {view === 'events'      && <SimulationControls />}
+        {view === 'lore'        && <LoreCodex />}
+        {view === 'dungeons'    && <DungeonView />}
+      </Suspense>
     </Layout>
   );
 }
