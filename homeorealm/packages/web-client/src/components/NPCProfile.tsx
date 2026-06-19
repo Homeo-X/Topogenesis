@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { api, type NPCSummary, type NPCFull, type Relationship, type Memory } from '../api.js';
+import { RelationshipGraph } from './RelationshipGraph.js';
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 640);
@@ -121,17 +122,20 @@ function NPCDetail({ id }: { id: string }) {
       )}
 
       {tab === 'relationships' && (
-        <div className="rel-list">
-          {rels.length === 0 && <div className="empty">No relationships yet.</div>}
-          {rels.map(r => (
-            <div key={r.targetId} className="rel-row">
-              <span className="rel-name">{r.targetName}</span>
-              <span className="rel-type">{r.kinshipType}</span>
-              <span>Affection {(r.affection * 100).toFixed(0)}%</span>
-              <span>Trust {(r.trust * 100).toFixed(0)}%</span>
-              {r.conflict > 0.3 && <span className="conflict-flag">⚠ Conflict</span>}
-            </div>
-          ))}
+        <div>
+          <RelationshipGraph npcId={id} npcName={npc.name} relationships={rels} />
+          <div className="rel-list">
+            {rels.length === 0 && <div className="empty">No relationships yet.</div>}
+            {rels.map(r => (
+              <div key={r.targetId} className="rel-row">
+                <span className="rel-name">{r.targetName}</span>
+                <span className="rel-type">{r.kinshipType}</span>
+                <span>Affection {(r.affection * 100).toFixed(0)}%</span>
+                <span>Trust {(r.trust * 100).toFixed(0)}%</span>
+                {r.conflict > 0.3 && <span className="conflict-flag">⚠ Conflict</span>}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
