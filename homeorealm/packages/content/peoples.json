@@ -1,0 +1,50 @@
+[
+  {
+    "id": "Aurans",
+    "name": "Aurans",
+    "region": "crown_valley",
+    "description": "Valley settlers with strong civic traditions; warm communities, practical craft, and bread-festival culture.",
+    "assetTheme": "Warm textiles, practical tools, family crests, bread/festival iconography, civic uniforms.",
+    "culturalTraits": ["communal", "industrious", "traditionalist", "civic-minded"]
+  },
+  {
+    "id": "Mireborn",
+    "name": "Mireborn",
+    "region": "mireglass",
+    "description": "Wetland lineage; deeply connected to memory and mourning rites; skilled herbalists and memory-keepers.",
+    "assetTheme": "Reflective glass jewelry, reed houses, mourning veils, memory lanterns, herbal masks.",
+    "culturalTraits": ["mournful", "perceptive", "memory-focused", "herbal-wise"]
+  },
+  {
+    "id": "Ashkin",
+    "name": "Ashkin",
+    "region": "ash_ring",
+    "description": "Volcanic border people; fierce, honorable, skilled in metalcraft; warriors with deep ritual traditions.",
+    "assetTheme": "Dark metal armor, red ceramic charms, ember tattoos, basalt architecture.",
+    "culturalTraits": ["martial", "honorable", "stoic", "ritual-bound"]
+  },
+  {
+    "id": "Coastfolk",
+    "name": "Coastfolk",
+    "region": "saffron_coast",
+    "description": "Maritime culture; traders, fishers, and sailors; welcoming to immigrants and prone to festival excess.",
+    "assetTheme": "Sails, shell ornaments, blue-green dyes, fish markets, rope bridges, shipboard shrines.",
+    "culturalTraits": ["welcoming", "mercantile", "adventurous", "festive"]
+  },
+  {
+    "id": "Highroot Clans",
+    "name": "Highroot Clans",
+    "region": "highroot",
+    "description": "Canopy dwellers; ecological stewards with deep knowledge of forest systems and animal behavior.",
+    "assetTheme": "Layered leaf cloaks, carved wood, animal motifs, vertical village assets.",
+    "culturalTraits": ["ecological", "patient", "animist", "cooperative"]
+  },
+  {
+    "id": "North Archive Houses",
+    "name": "North Archive Houses",
+    "region": "quiet_north",
+    "description": "Snow scholars; keepers of ancestral records and topogenic lore; cold-adapted and deeply analytical.",
+    "assetTheme": "Pale stone, fur-lined robes, runic ledgers, cold-light lamps, archive vaults.",
+    "culturalTraits": ["scholarly", "disciplined", "ancestral", "analytical"]
+  }
+]

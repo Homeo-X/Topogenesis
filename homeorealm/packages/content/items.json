@@ -1,0 +1,23 @@
+[
+  { "id": "hearth_bread", "name": "Hearth Bread", "category": "food", "description": "Dense, golden bread baked from valley grain; staple of Auran households.", "baseValue": 2, "stackable": true },
+  { "id": "salted_fish", "name": "Salted Fish", "category": "food", "description": "Coastfolk-cured fish, preserved for long transport.", "baseValue": 3, "stackable": true },
+  { "id": "root_broth", "name": "Root Broth", "category": "food", "description": "Mireborn survival staple made from marsh-root vegetables.", "baseValue": 1, "stackable": true },
+  { "id": "ember_grain", "name": "Ember Grain", "category": "food", "description": "Heat-treated grain from Ash-Ring border farms; resilient in harsh seasons.", "baseValue": 2, "stackable": true },
+  { "id": "canopy_fruit", "name": "Canopy Fruit", "category": "food", "description": "Sweet fruit harvested from Highroot trees; rare in lowland markets.", "baseValue": 4, "stackable": true },
+  { "id": "feverwort", "name": "Feverwort", "category": "medicine", "description": "Common herb used to treat fever; grows in damp meadows.", "baseValue": 5, "stackable": true },
+  { "id": "mirror_moss", "name": "Mirror Moss", "category": "medicine", "description": "Mireborn medicinal moss; soothes emotional trauma and aids memory recovery.", "baseValue": 8, "stackable": true },
+  { "id": "ashblossom", "name": "Ashblossom", "category": "medicine", "description": "Volcanic herb with potent anti-inflammatory properties.", "baseValue": 10, "stackable": true },
+  { "id": "farm_tools", "name": "Farm Tools", "category": "tool", "description": "Standard hoe, rake, and sickle set; essential for any farming household.", "baseValue": 15 },
+  { "id": "smithing_hammer", "name": "Smithing Hammer", "category": "tool", "description": "Heavy iron hammer used by Votive Smiths.", "baseValue": 25 },
+  { "id": "healer_kit", "name": "Healer's Kit", "category": "tool", "description": "Bag of bandages, herbs, and salves; standard equipment for a healer.", "baseValue": 30 },
+  { "id": "guard_blade", "name": "Guard's Blade", "category": "tool", "description": "Short sword issued to town guards; serviceable and reliable.", "baseValue": 40 },
+  { "id": "crown_wool", "name": "Crown Valley Wool", "category": "material", "description": "High-quality wool from valley livestock.", "baseValue": 6, "stackable": true },
+  { "id": "ash_ore", "name": "Ash-Ring Ore", "category": "material", "description": "Iron-rich volcanic ore; smelts into high-grade metal.", "baseValue": 8, "stackable": true },
+  { "id": "highroot_timber", "name": "Highroot Timber", "category": "material", "description": "Dense, durable timber from canopy trees.", "baseValue": 7, "stackable": true },
+  { "id": "auran_weave", "name": "Auran Weave", "category": "clothing", "description": "Traditional Auran cloth; warm, durable, and community-colored.", "baseValue": 12 },
+  { "id": "mireborn_veil", "name": "Mireborn Mourning Veil", "category": "clothing", "description": "Translucent veil worn during memorial rites.", "baseValue": 18 },
+  { "id": "ashkin_armor", "name": "Ashkin Battle-Wrap", "category": "clothing", "description": "Dark metal-plate armor favored by Ashkin warriors.", "baseValue": 60 },
+  { "id": "hearthworn_bread_knife", "name": "Hearthworn Bread Knife", "category": "artifact", "description": "A blade forged after the Bread Riot; carries family memory and baking tradition.", "baseValue": 50 },
+  { "id": "memory_lantern", "name": "Memory Lantern", "category": "ritual", "description": "A Mireborn lantern that glows when near high-salience memory events.", "baseValue": 35 },
+  { "id": "oath_ribbon", "name": "Oath Ribbon", "category": "ritual", "description": "Woven ribbon used in binding ceremonies; carries symbolic obligation.", "baseValue": 20 }
+]

@@ -1,0 +1,98 @@
+[
+  {
+    "id": "auran_farmer",
+    "people": "Aurans",
+    "possibleJobs": ["farmer", "gatherer"],
+    "traitBias": { "industrious": 0.7, "communal": 0.6, "traditional": 0.5 },
+    "skillBias": { "farming": 0.5, "gathering": 0.3, "cooking": 0.4 },
+    "namePool": ["Aldric", "Maren", "Solen", "Willa", "Dafton", "Liora", "Cress", "Edwin", "Tam", "Rilla"]
+  },
+  {
+    "id": "auran_crafter",
+    "people": "Aurans",
+    "possibleJobs": ["crafter", "merchant"],
+    "traitBias": { "precise": 0.7, "patient": 0.6, "communal": 0.4 },
+    "skillBias": { "crafting": 0.55, "trade": 0.35, "cooking": 0.2 },
+    "namePool": ["Bram", "Sela", "Torvin", "Nara", "Holt", "Fara", "Kell", "Owin"]
+  },
+  {
+    "id": "auran_healer",
+    "people": "Aurans",
+    "possibleJobs": ["healer", "scholar"],
+    "traitBias": { "compassionate": 0.8, "studious": 0.6 },
+    "skillBias": { "medicine": 0.6, "scholarship": 0.4, "gathering": 0.3 },
+    "namePool": ["Mirith", "Galen", "Calyx", "Sera", "Dwyn", "Lorn"]
+  },
+  {
+    "id": "auran_guard",
+    "people": "Aurans",
+    "possibleJobs": ["guard", "adventurer"],
+    "traitBias": { "disciplined": 0.7, "loyal": 0.6, "brave": 0.5 },
+    "skillBias": { "combat": 0.55, "exploration": 0.35, "labor": 0.3 },
+    "namePool": ["Tor", "Vex", "Lyra", "Denn", "Kaev", "Risa", "Sten", "Mora"]
+  },
+  {
+    "id": "auran_civic",
+    "people": "Aurans",
+    "possibleJobs": ["civic_officer", "merchant"],
+    "traitBias": { "diplomatic": 0.7, "pragmatic": 0.5, "communal": 0.6 },
+    "skillBias": { "governance": 0.55, "trade": 0.45 },
+    "namePool": ["Aldren", "Pira", "Cyron", "Vell", "Hesta", "Oran"]
+  },
+  {
+    "id": "mireborn_gatherer",
+    "people": "Mireborn",
+    "possibleJobs": ["gatherer", "healer"],
+    "traitBias": { "perceptive": 0.7, "melancholic": 0.4, "empathic": 0.6 },
+    "skillBias": { "gathering": 0.6, "medicine": 0.4, "scholarship": 0.2 },
+    "namePool": ["Ossil", "Veyne", "Mura", "Thal", "Sheva", "Liss", "Fenn"]
+  },
+  {
+    "id": "ashkin_guard",
+    "people": "Ashkin",
+    "possibleJobs": ["guard", "adventurer"],
+    "traitBias": { "martial": 0.7, "honorable": 0.6, "stoic": 0.5 },
+    "skillBias": { "combat": 0.65, "crafting": 0.25, "exploration": 0.3 },
+    "namePool": ["Kolvar", "Zeth", "Brak", "Yara", "Dorn", "Skarr"]
+  },
+  {
+    "id": "ashkin_crafter",
+    "people": "Ashkin",
+    "possibleJobs": ["crafter", "farmer"],
+    "traitBias": { "precise": 0.6, "honorable": 0.5, "ritual-bound": 0.4 },
+    "skillBias": { "crafting": 0.65, "labor": 0.4 },
+    "namePool": ["Ferrik", "Grath", "Skella", "Vor", "Eska"]
+  },
+  {
+    "id": "coastfolk_merchant",
+    "people": "Coastfolk",
+    "possibleJobs": ["merchant", "adventurer"],
+    "traitBias": { "welcoming": 0.6, "mercantile": 0.7, "adventurous": 0.5 },
+    "skillBias": { "trade": 0.65, "exploration": 0.35, "cooking": 0.3 },
+    "namePool": ["Callas", "Meva", "Syren", "Brist", "Nilo", "Corva"]
+  },
+  {
+    "id": "highroot_farmer",
+    "people": "Highroot Clans",
+    "possibleJobs": ["farmer", "gatherer"],
+    "traitBias": { "ecological": 0.7, "patient": 0.6, "animist": 0.4 },
+    "skillBias": { "farming": 0.45, "gathering": 0.6, "medicine": 0.3 },
+    "namePool": ["Sylvan", "Denra", "Leaf", "Root", "Bark", "Brenn"]
+  },
+  {
+    "id": "north_archive_scholar",
+    "people": "North Archive Houses",
+    "possibleJobs": ["scholar", "civic_officer"],
+    "traitBias": { "scholarly": 0.8, "disciplined": 0.6, "analytical": 0.7 },
+    "skillBias": { "scholarship": 0.7, "governance": 0.4 },
+    "namePool": ["Icerun", "Coldwright", "Frostin", "Arcane", "Voren", "Stern"]
+  },
+  {
+    "id": "auran_scholar",
+    "people": "Aurans",
+    "possibleJobs": ["scholar", "civic_officer"],
+    "traitBias": { "studious": 0.7, "curious": 0.6 },
+    "skillBias": { "scholarship": 0.55, "governance": 0.35 },
+    "namePool": ["Quill", "Page", "Codex", "Lumen", "Mote", "Veritas"]
+  }
+]

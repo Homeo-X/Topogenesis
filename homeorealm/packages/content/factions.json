@@ -1,0 +1,51 @@
+[
+  {
+    "id": "hearthwardens",
+    "name": "Hearthwardens",
+    "description": "Civic stewards who maintain Hearthwell viability, approve public works, and lead crisis response.",
+    "function": "Hearthwell maintenance and civic governance",
+    "allegiances": ["crown_valley", "mireglass"]
+  },
+  {
+    "id": "ledger_houses",
+    "name": "Ledger Houses",
+    "description": "Archivists who track ancestry, property, contracts, memory disputes, and historical legitimacy.",
+    "function": "Lineage records, contracts, and memory governance",
+    "allegiances": ["mireglass", "quiet_north"]
+  },
+  {
+    "id": "green_apron_guild",
+    "name": "The Green Apron Guild",
+    "description": "Farmers, cooks, brewers, fishers, and herbalists. They control food stability and festival provisions.",
+    "function": "Food production and festival management",
+    "allegiances": ["crown_valley", "highroot", "saffron_coast"]
+  },
+  {
+    "id": "votive_smiths",
+    "name": "Votive Smiths",
+    "description": "Crafters who bind tools to vows, professions, family lines, and town history.",
+    "function": "Tool crafting and oath binding",
+    "allegiances": ["ash_ring"]
+  },
+  {
+    "id": "wayfarer_compact",
+    "name": "Wayfarer Compact",
+    "description": "Adventurer network that maps rifts, escorts caravans, and reports anomalous topogenic changes.",
+    "function": "Exploration, cartography, and escort services",
+    "allegiances": ["saffron_coast", "ash_ring"]
+  },
+  {
+    "id": "null_choir",
+    "name": "The Null Choir",
+    "description": "Philosophical cult that believes all distinctions cause suffering and should dissolve back into the White Quiet.",
+    "function": "Ideological disruption and philosophical challenge",
+    "allegiances": ["subframe_labyrinth"]
+  },
+  {
+    "id": "kinless_court",
+    "name": "Kinless Court",
+    "description": "A political faction for immigrants, orphans, exiles, unmarried NPCs, and players without local family ties.",
+    "function": "Advocacy for the unaffiliated and immigrant rights",
+    "allegiances": ["crown_valley", "saffron_coast"]
+  }
+]
