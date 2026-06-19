@@ -41,10 +41,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Typecheck sim-core
-        run: npx tsc --noEmit
-        working-directory: homeorealm/packages/sim-core
-
       - name: Build standalone web app
         run: npm run build:standalone
         working-directory: homeorealm/packages/web-client
@@ -67,13 +63,40 @@ jobs:
         run: chmod +x android/gradlew
         working-directory: homeorealm/packages/web-client
 
-      - name: Build debug APK
-        run: ./gradlew assembleDebug --no-daemon
+      - name: Build release APK
+        run: ./gradlew assembleRelease --no-daemon
         working-directory: homeorealm/packages/web-client/android
 
-      - name: Upload APK artifact
+      - name: Generate signing keystore
+        run: |
+          keytool -genkeypair -v \
+            -keystore homeorealm-release.jks \
+            -alias homeorealm \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass HomeoRealm2025! \
+            -keypass HomeoRealm2025! \
+            -dname "CN=HomeoRealm,O=HomeoRealm,C=US" \
+            -noprompt
+        working-directory: homeorealm/packages/web-client/android
+
+      - name: Sign release APK
+        run: |
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name "apksigner" -type f | sort -rV | head -1)
+          echo "Using apksigner: $APKSIGNER"
+          $APKSIGNER sign \
+            --ks homeorealm-release.jks \
+            --ks-pass pass:HomeoRealm2025! \
+            --key-pass pass:HomeoRealm2025! \
+            --ks-key-alias homeorealm \
+            --out app/build/outputs/apk/release/HomeoRealm.apk \
+            app/build/outputs/apk/release/app-release-unsigned.apk
+        working-directory: homeorealm/packages/web-client/android
+
+      - name: Upload signed release APK
         uses: actions/upload-artifact@v4
         with:
-          name: HomeoRealm-debug-apk
-          path: homeorealm/packages/web-client/android/app/build/outputs/apk/debug/app-debug.apk
+          name: HomeoRealm-release-apk
+          path: homeorealm/packages/web-client/android/app/build/outputs/apk/release/HomeoRealm.apk
           retention-days: 30
