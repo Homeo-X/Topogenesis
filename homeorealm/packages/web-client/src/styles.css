@@ -383,14 +383,14 @@ button { cursor: pointer; font-family: var(--font); touch-action: manipulation; 
 .rel-type-badge {
   display: inline-block;
   font-size: 10px;
-  color: var(--muted);
+  color: var(--text-muted);
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 4px;
   padding: 1px 6px;
   margin-bottom: 6px;
 }
-.rel-graph-stats { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: var(--muted); }
+.rel-graph-stats { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: var(--text-muted); }
 .rel-graph-legend {
   display: flex;
   flex-wrap: wrap;
@@ -398,7 +398,7 @@ button { cursor: pointer; font-family: var(--font); touch-action: manipulation; 
   justify-content: center;
   margin-top: 8px;
   font-size: 11px;
-  color: var(--muted);
+  color: var(--text-muted);
 }
 .legend-dot {
   display: inline-block;
@@ -411,4 +411,267 @@ button { cursor: pointer; font-family: var(--font); touch-action: manipulation; 
 @media (max-width: 640px) {
   .rel-graph-tooltip { position: static; margin-top: 8px; }
   .rel-graph-svg { max-width: 100%; }
+}
+
+/* ─── 3D World View ──────────────────────────────────── */
+.world-3d-wrap {
+  position: relative;
+  width: 100%;
+  height: calc(100vh - var(--header-h));
+  background: #0b111a;
+  overflow: hidden;
+}
+.world-3d-wrap canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* HUD overlay — pointer-events:none by default so clicks reach canvas */
+.hud-3d {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ── Enter prompt ── */
+.enter-3d-prompt {
+  position: absolute;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  background: rgba(14,14,18,0.75);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 28px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  max-width: 420px;
+  width: 90%;
+}
+.enter-3d-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+.enter-3d-day {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+.enter-3d-sub {
+  font-size: 14px;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.enter-3d-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+.enter-3d-btn {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 9px 24px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  pointer-events: auto;
+  min-height: 44px;
+  touch-action: manipulation;
+}
+.enter-3d-btn:hover { filter: brightness(1.15); }
+
+/* ── Crosshair ── */
+.crosshair-3d {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 20px;
+}
+.ch-h, .ch-v {
+  position: absolute;
+  background: rgba(255,255,255,0.75);
+  border-radius: 1px;
+}
+.ch-h { width: 16px; height: 2px; top: 9px; left: 2px; }
+.ch-v { width: 2px; height: 16px; top: 2px; left: 9px; }
+
+/* ── HUD top bar ── */
+.hud-3d-top {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 16px;
+  background: rgba(14,14,18,0.65);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 18px;
+  font-size: 13px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.hud-3d-settlement { color: var(--accent); font-weight: 600; }
+.hud-3d-day { color: var(--text-muted); }
+
+/* ── Nearby NPCs panel ── */
+.hud-3d-nearby {
+  position: absolute;
+  bottom: 24px;
+  right: 20px;
+  background: rgba(14,14,18,0.75);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  min-width: 180px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.nearby-title {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.nearby-npc-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text);
+  padding: 3px 0;
+}
+.nearby-job { color: var(--text-muted); font-size: 11px; }
+.interact-prompt {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--accent);
+  text-align: center;
+}
+
+/* ── ESC hint ── */
+.hud-3d-esc {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  color: rgba(255,255,255,0.35);
+}
+
+/* ── NPC inspector panel ── */
+.npc-inspect-3d {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px;
+  min-width: 280px;
+  max-width: 340px;
+  pointer-events: auto;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.7);
+}
+.npc-inspect-close {
+  position: absolute;
+  top: 12px; right: 14px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 16px;
+  cursor: pointer;
+  line-height: 1;
+  min-height: 32px;
+  min-width: 32px;
+}
+.npc-inspect-close:hover { color: var(--text); }
+.npc-inspect-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.npc-inspect-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+.npc-inspect-bars { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+.inspect-stat {
+  display: grid;
+  grid-template-columns: 70px 1fr 36px;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.inspect-bar-track {
+  height: 6px;
+  background: var(--surface2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.inspect-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+.npc-inspect-action {
+  font-size: 12px;
+  font-style: italic;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+/* ── NPC floating name labels (Html from drei) ── */
+.npc-label-3d {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.npc-label-name {
+  background: rgba(14,14,18,0.82);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 11px;
+  color: var(--text);
+  white-space: nowrap;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.npc-label-job {
+  font-size: 9px;
+  color: var(--text-muted);
+  background: rgba(14,14,18,0.7);
+  border-radius: 4px;
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+.npc-label-3d:hover .npc-label-name { border-color: var(--accent); color: var(--accent); }
+
+/* ── Mobile overrides ── */
+@media (max-width: 640px) {
+  .enter-3d-prompt { bottom: 16px; padding: 14px 18px; }
+  .hud-3d-nearby { right: 8px; bottom: 16px; min-width: 150px; padding: 10px 12px; }
+  .npc-inspect-3d { min-width: 260px; padding: 18px; }
 }

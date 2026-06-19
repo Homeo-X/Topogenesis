@@ -4,6 +4,7 @@ type NavItem = { label: string; view: string };
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', view: 'dashboard' },
+  { label: '3D World', view: 'world3d' },
   { label: 'NPCs', view: 'npcs' },
   { label: 'Quests', view: 'quests' },
   { label: 'Settlement', view: 'settlement' },

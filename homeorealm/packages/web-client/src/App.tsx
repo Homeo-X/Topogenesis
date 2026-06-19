@@ -9,6 +9,7 @@ const HouseholdPanel  = lazy(() => import('./components/HouseholdPanel.js').then
 const SimulationControls = lazy(() => import('./components/SimulationControls.js').then(m => ({ default: m.SimulationControls })));
 const LoreCodex       = lazy(() => import('./components/LoreCodex.js').then(m => ({ default: m.LoreCodex })));
 const DungeonView     = lazy(() => import('./components/DungeonView.js').then(m => ({ default: m.DungeonView })));
+const WorldView3D     = lazy(() => import('./components/WorldView3D.js').then(m => ({ default: m.WorldView3D })));
 
 function LoadingFallback() {
   return <div className="suspense-loading">Loading...</div>;
@@ -28,6 +29,7 @@ export function App() {
         {view === 'events'      && <SimulationControls />}
         {view === 'lore'        && <LoreCodex />}
         {view === 'dungeons'    && <DungeonView />}
+        {view === 'world3d'     && <WorldView3D />}
       </Suspense>
     </Layout>
   );
