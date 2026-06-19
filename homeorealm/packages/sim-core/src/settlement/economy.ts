@@ -4,7 +4,7 @@ import type { SettlementResources, SettlementState, NPCState } from '../types.js
 import type { SeasonalModifiers } from '../time.js';
 
 const DAILY_CONSUMPTION_PER_NPC: Partial<SettlementResources> = {
-  food: 0.3,
+  food: 0.18,
   medicine: 0.02,
   tools: 0.01,
 };

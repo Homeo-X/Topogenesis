@@ -125,7 +125,7 @@ export function executeAction(
     case 'gather_resource': {
       const amount = 0.5 + (npc.skills['gathering'] ?? 0.1) * 0.5;
       baseResult.skillGains['gathering'] = 0.01;
-      baseResult.settlementResourceDeltas = { food: amount * 0.5, wood: amount * 0.3 };
+      baseResult.settlementResourceDeltas = { food: amount * 2.0, wood: amount * 0.5 };
       baseResult.needsUpdates.purpose = Math.min(1, npc.needs.purpose + 0.2);
       break;
     }
@@ -250,8 +250,8 @@ const JOB_SKILL_MAP: Record<string, string> = {
 
 function getJobOutput(job: string, amount: number): Partial<SettlementResources> {
   switch (job) {
-    case 'farmer':   return { food: amount * 1.5 };
-    case 'gatherer': return { food: amount * 0.8, wood: amount * 0.5 };
+    case 'farmer':   return { food: amount * 5.0 };
+    case 'gatherer': return { food: amount * 2.5, wood: amount * 0.5 };
     case 'guard':    return { security: amount * 0.1 };
     case 'crafter':  return { tools: amount * 0.8, cloth: amount * 0.3 };
     case 'healer':   return { medicine: amount * 0.7 };

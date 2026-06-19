@@ -11,7 +11,7 @@ export function createInitialResources(regionId: string): SettlementResources {
 
   // Regional modifiers
   switch (regionId) {
-    case 'crown_valley':   return { ...base, food: 70, coin: 120 };
+    case 'crown_valley':   return { ...base, food: 120, coin: 120 };
     case 'mireglass':      return { ...base, medicine: 20, food: 40 };
     case 'ash_ring':       return { ...base, ore: 40, tools: 30, food: 30 };
     case 'saffron_coast':  return { ...base, food: 55, coin: 150, cloth: 20 };
