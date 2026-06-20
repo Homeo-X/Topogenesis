@@ -1323,3 +1323,203 @@ button { cursor: pointer; font-family: var(--font); touch-action: manipulation; 
   .npc-inspect-close { min-height: 44px; min-width: 44px; font-size: 18px; }
   .npc-inspect-name { font-size: 20px; }
 }
+
+/* ─── MOBA / Mobile game controls ──────────────────────── */
+.moba-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 30;
+  user-select: none;
+}
+
+.joystick-base {
+  position: absolute;
+  left: 20px;
+  bottom: calc(24px + var(--safe-bottom));
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.07);
+  border: 2px solid rgba(255,255,255,0.2);
+  pointer-events: all;
+  touch-action: none;
+}
+
+.joystick-thumb {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.32);
+  border: 2px solid rgba(255,255,255,0.6);
+  pointer-events: none;
+}
+
+/* Right-half swipe zone — rotates camera yaw */
+.touch-look-zone {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: all;
+  touch-action: none;
+}
+
+.action-buttons {
+  position: absolute;
+  right: 22px;
+  bottom: calc(28px + var(--safe-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  pointer-events: all;
+}
+
+.action-btn {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.4);
+  background: rgba(0,0,0,0.42);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  touch-action: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  line-height: 1;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.action-label {
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: rgba(255,255,255,0.72);
+  text-transform: uppercase;
+}
+
+.action-talk {
+  background: rgba(50,110,70,0.55);
+  border-color: rgba(70,190,100,0.65);
+}
+.action-talk:active { background: rgba(50,110,70,0.85); transform: scale(0.94); }
+
+.action-sprint {
+  background: rgba(40,80,180,0.55);
+  border-color: rgba(70,120,255,0.65);
+}
+.action-sprint:active { background: rgba(40,80,180,0.85); transform: scale(0.94); }
+
+/* Nearby NPC indicator in MOBA overlay */
+.moba-nearby {
+  position: absolute;
+  top: 50%;
+  right: 96px;
+  transform: translateY(-50%);
+  background: rgba(14,14,18,0.75);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 12px;
+  min-width: 120px;
+  pointer-events: none;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  font-size: 12px;
+}
+
+/* Mobile top bar (world3d) */
+.hud-3d-top--mobile {
+  left: 50%;
+  transform: translateX(-50%);
+  top: 10px;
+  width: auto;
+  gap: 12px;
+  padding: 5px 14px;
+  background: rgba(14,14,18,0.6);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.hud-3d-weather {
+  color: var(--text-muted);
+  font-size: 11px;
+  text-transform: capitalize;
+}
+
+/* Portrait orientation warning */
+.portrait-warning {
+  display: none;
+}
+
+@media (orientation: portrait) {
+  .portrait-warning {
+    display: flex;
+    position: absolute;
+    inset: 0;
+    background: rgba(10,10,16,0.96);
+    z-index: 200;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    color: #fff;
+    text-align: center;
+    padding: 36px;
+    pointer-events: all;
+  }
+}
+
+.portrait-icon {
+  font-size: 56px;
+  animation: rotateHint 2.2s ease-in-out infinite;
+}
+
+.portrait-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.portrait-sub {
+  font-size: 14px;
+  color: var(--text-muted);
+  max-width: 240px;
+  line-height: 1.5;
+}
+
+@keyframes rotateHint {
+  0%, 100% { transform: rotate(0deg); }
+  35% { transform: rotate(-90deg); }
+  65% { transform: rotate(-90deg); }
+}
+
+/* Landscape mobile — full-screen world3d */
+@media (orientation: landscape) and (max-height: 520px) {
+  .layout[data-view="world3d"] .top-bar { display: none !important; }
+  .layout[data-view="world3d"] .bottom-nav { display: none !important; }
+  .layout[data-view="world3d"] .world-3d-wrap {
+    height: 100vh;
+    height: 100dvh;
+  }
+  .layout[data-view="world3d"] .player-hud { display: none !important; }
+  .layout[data-view="world3d"] .physics-chem-hud { display: none !important; }
+  .joystick-base { left: 16px; bottom: calc(16px + var(--safe-bottom)); width: 100px; height: 100px; }
+  .action-buttons { right: 16px; bottom: calc(16px + var(--safe-bottom)); }
+  .action-btn { width: 54px; height: 54px; font-size: 0.9rem; }
+}

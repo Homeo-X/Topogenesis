@@ -64,7 +64,7 @@ export function Layout({
   }, [moreOpen]);
 
   return (
-    <div className="layout">
+    <div className="layout" data-view={activeView}>
       <header className="top-bar">
         <div className="logo">⬡ HomeoRealm</div>
 

@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState, useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { Sky, PointerLockControls, Html, OrbitControls, useGLTF } from '@react-three/drei';
+import { Sky, PointerLockControls, Html, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import type { EnvironmentState, NPCSummary, Settlement } from '../../api.js';
 
@@ -14,6 +14,10 @@ interface SceneProps {
   onLockChange: (locked: boolean) => void;
   onSelectNPC: (npc: NPCSummary | null) => void;
   onNearbyNPCs: (npcs: NPCSummary[]) => void;
+  joystickAxisRef: { current: { x: number; y: number } };
+  cameraYawRef: { current: number };
+  sprintRef: { current: boolean };
+  talkRef: { current: boolean };
 }
 
 interface BuildingDef {
@@ -587,6 +591,92 @@ function PlayerControls({ npcs, playerPos, colliders, environment, onLockChange,
   );
 }
 
+// ─── Mobile MOBA player controls ──────────────────────────────────────────
+
+function MobilePlayerControls({ npcs, playerPos, colliders, joystickAxisRef, cameraYawRef, sprintRef, talkRef, environment, onLockChange, onSelectNPC, onNearbyNPCs }: {
+  npcs: NPCSummary[];
+  playerPos: { current: THREE.Vector3 };
+  colliders: Collider[];
+  joystickAxisRef: { current: { x: number; y: number } };
+  cameraYawRef: { current: number };
+  sprintRef: { current: boolean };
+  talkRef: { current: boolean };
+  environment: EnvironmentState;
+  onLockChange: (l: boolean) => void;
+  onSelectNPC: (n: NPCSummary | null) => void;
+  onNearbyNPCs: (n: NPCSummary[]) => void;
+}) {
+  const { camera } = useThree();
+  const charPos = useRef(new THREE.Vector3(0, 0, 12));
+  const hudClock = useRef(0);
+
+  useEffect(() => {
+    camera.position.set(0, 5, 21);
+    onLockChange(true);
+    return () => onLockChange(false);
+  }, [camera, onLockChange]);
+
+  useFrame((_, dt) => {
+    const { x: jx, y: jy } = joystickAxisRef.current;
+    const yaw = cameraYawRef.current;
+    const sinY = Math.sin(yaw);
+    const cosY = Math.cos(yaw);
+
+    // Forward faces -Z rotated by yaw; joystick y-up = forward
+    const moveX = (-sinY) * (-jy) + cosY * jx;
+    const moveZ = (-cosY) * (-jy) + (-sinY) * jx;
+
+    const wetSlowdown = environment.physics.soilMoisture > 0.65 ? 1.2 : 0;
+    const speed = (sprintRef.current ? 11 : 6.5) - wetSlowdown;
+
+    const cur = charPos.current;
+    let nx = cur.x + moveX * speed * dt;
+    let nz = cur.z + moveZ * speed * dt;
+    nx = THREE.MathUtils.clamp(nx, -185, 185);
+    nz = THREE.MathUtils.clamp(nz, -185, 185);
+    const resolved = resolveCollision(new THREE.Vector3(nx, 0, nz), colliders, 0.55);
+    nx = resolved.x; nz = resolved.z;
+    const ny = getTerrainY(nx, nz);
+
+    charPos.current.set(nx, ny, nz);
+    playerPos.current.set(nx, ny + 1.7, nz);
+
+    // 3rd-person follow camera
+    const camDist = 9;
+    const camH = 5;
+    const lf = 1 - Math.exp(-dt * 7);
+    camera.position.x += (nx + sinY * camDist - camera.position.x) * lf;
+    camera.position.y += (ny + camH - camera.position.y) * lf;
+    camera.position.z += (nz + cosY * camDist - camera.position.z) * lf;
+    camera.lookAt(nx, ny + 1.2, nz);
+
+    // Talk action (consumed once)
+    if (talkRef.current) {
+      talkRef.current = false;
+      let best: NPCSummary | null = null;
+      let bestDist = 7;
+      for (const npc of npcs) {
+        const bp = npcBasePos(npc.id);
+        const d = charPos.current.distanceTo(new THREE.Vector3(bp[0], 0, bp[2]));
+        if (d < bestDist) { bestDist = d; best = npc; }
+      }
+      if (best) onSelectNPC(best);
+    }
+
+    hudClock.current += dt;
+    if (hudClock.current > 0.5) {
+      hudClock.current = 0;
+      const nearby = npcs.filter(npc => {
+        const bp = npcBasePos(npc.id);
+        return charPos.current.distanceTo(new THREE.Vector3(bp[0], 0, bp[2])) < 6;
+      });
+      onNearbyNPCs(nearby);
+    }
+  });
+
+  return null;
+}
+
 // ─── Town well (center landmark) ──────────────────────────────────────────
 
 function TownWell() {
@@ -1005,16 +1095,13 @@ function SettlementDressing() {
   );
 }
 
-export function World3DScene({ npcs, settlement, environment: environmentInput, isMobile, onLockChange, onSelectNPC, onNearbyNPCs }: SceneProps) {
+export function World3DScene({ npcs, settlement, environment: environmentInput, isMobile, onLockChange, onSelectNPC, onNearbyNPCs, joystickAxisRef, cameraYawRef, sprintRef, talkRef }: SceneProps) {
   const playerPos = useRef(new THREE.Vector3(0, 1.7, 12));
-  const { camera } = useThree();
   const environment = envOrFallback(environmentInput);
   const buildings = useMemo(() => generateBuildings(settlement?.population ?? 24), [settlement?.population]);
   const colliders = useMemo(() => createColliders(buildings), [buildings]);
   const skyTurbidity = 2.5 + environment.physics.humidity * 3 + Math.min(2, environment.physics.rainfallMm / 8);
   const sunHeight = environment.weather === 'storm' || environment.weather === 'rain' ? 8 : 20;
-
-  useFrame(() => { if (isMobile) playerPos.current.copy(camera.position); });
 
   return (
     <>
@@ -1056,11 +1143,18 @@ export function World3DScene({ npcs, settlement, environment: environmentInput, 
       ))}
 
       {isMobile
-        ? <OrbitControls
-            target={[0, 1, 0]}
-            minDistance={5}
-            maxDistance={100}
-            maxPolarAngle={Math.PI / 2.05}
+        ? <MobilePlayerControls
+            npcs={npcs}
+            playerPos={playerPos}
+            colliders={colliders}
+            joystickAxisRef={joystickAxisRef}
+            cameraYawRef={cameraYawRef}
+            sprintRef={sprintRef}
+            talkRef={talkRef}
+            environment={environment}
+            onLockChange={onLockChange}
+            onSelectNPC={onSelectNPC}
+            onNearbyNPCs={onNearbyNPCs}
           />
         : <PlayerControls
             npcs={npcs}
