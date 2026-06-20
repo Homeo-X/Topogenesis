@@ -7,6 +7,9 @@ import {
   initializeWorld,
   tickDay,
   computeViability,
+  ensureEnvironment,
+  ensurePlayer,
+  applyPlayerAction,
   getActiveQuests,
   getTopViabilityNPCs as coreTopViability,
   getBottomViabilityNPCs as coreBottomViability,
@@ -15,7 +18,7 @@ import type { WorldState, NPCState, EventStore } from '@homeorealm/sim-core';
 import type {
   WorldSummary, WorldEvent, NPCSummary, NPCFull, Relationship, Memory,
   FrameDistinction, Settlement, Household, DungeonRoom, Quest,
-  Region, Faction, People, Asset,
+  Region, Faction, People, Asset, PlayerState, PlayerActionInput, PlayerActionResponse,
 } from './api.js';
 
 // ─── Persistent state ──────────────────────────────────────────────────────
@@ -37,6 +40,7 @@ function loadOrInit(): void {
   if (savedWorld) {
     try { world = JSON.parse(savedWorld) as WorldState; } catch { /* ignore */ }
   }
+  world = { ...world, environment: ensureEnvironment(world.environment, world.seed, Object.values(world.settlements)[0]?.regionId) };
   if (savedEvents) {
     try { eventStore.importSnapshot(JSON.parse(savedEvents)); } catch { /* ignore */ }
   }
@@ -110,6 +114,7 @@ function makeWorldSummary(): WorldSummary {
     avgViability: avgViab.toFixed(3),
     activeQuests: getActiveQuests(world).length,
     dungeonRooms: world.dungeonRooms.length,
+    environment: ensureEnvironment(world.environment, world.seed, Object.values(world.settlements)[0]?.regionId),
   };
 }
 
@@ -128,9 +133,9 @@ const FACTIONS: Faction[] = [
 ];
 
 const PEOPLES: People[] = [
-  { id: 'valari', name: 'Valari', description: 'Ancestral memory-keepers with deep oral traditions.', assetTheme: 'twilight purple', culturalTraits: ['communal', 'ritual-minded', 'long-memory'] },
-  { id: 'threnosi', name: 'Threnosi', description: 'Seafarers and coastal traders.', assetTheme: 'sea green', culturalTraits: ['independent', 'adaptable', 'pragmatic'] },
-  { id: 'aurath', name: 'Aurath', description: 'Desert forgers and precision craftspeople.', assetTheme: 'amber gold', culturalTraits: ['disciplined', 'proud', 'merit-focused'] },
+  { id: 'valari', name: 'Valari', region: 'ashenveil', description: 'Ancestral memory-keepers with deep oral traditions.', assetTheme: 'twilight purple', culturalTraits: ['communal', 'ritual-minded', 'long-memory'] },
+  { id: 'threnosi', name: 'Threnosi', region: 'sunreach', description: 'Seafarers and coastal traders.', assetTheme: 'sea green', culturalTraits: ['independent', 'adaptable', 'pragmatic'] },
+  { id: 'aurath', name: 'Aurath', region: 'ironmoor', description: 'Desert forgers and precision craftspeople.', assetTheme: 'amber gold', culturalTraits: ['disciplined', 'proud', 'merit-focused'] },
 ];
 
 const ASSETS: Asset[] = [
@@ -144,6 +149,24 @@ export const api = {
   getWorld(): Promise<WorldSummary> {
     ensureInit();
     return Promise.resolve(makeWorldSummary());
+  },
+
+  getPlayer(): Promise<PlayerState> {
+    ensureInit();
+    const player = ensurePlayer(world);
+    if (!world.player) {
+      world = { ...world, player };
+      persist();
+    }
+    return Promise.resolve(player);
+  },
+
+  playerAction(action: PlayerActionInput): Promise<PlayerActionResponse> {
+    ensureInit();
+    const result = applyPlayerAction(world, eventStore, action);
+    world = result.world;
+    persist();
+    return Promise.resolve({ player: result.player, message: result.message });
   },
 
   tick(): Promise<{ day: number; summary: WorldSummary }> {

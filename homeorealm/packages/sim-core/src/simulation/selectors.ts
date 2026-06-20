@@ -2,6 +2,7 @@
 
 import type { WorldState, NPCState, EmergentQuest } from '../types.js';
 import { computeViability } from '../npc/needs.js';
+import { ensureEnvironment } from '../environment/environment.js';
 
 export function getLiveNPCs(world: WorldState): NPCState[] {
   return Object.values(world.npcs).filter(n => n.isAlive);
@@ -25,6 +26,7 @@ export function getNPCsBySettlement(world: WorldState, settlementId: string): NP
 
 export function getWorldSummary(world: WorldState): object {
   const liveNpcs = getLiveNPCs(world);
+  const environment = ensureEnvironment(world.environment, world.seed, Object.values(world.settlements)[0]?.regionId);
   const avgViability = liveNpcs.length > 0
     ? liveNpcs.reduce((sum, n) => sum + computeViability(n), 0) / liveNpcs.length
     : 0;
@@ -39,5 +41,6 @@ export function getWorldSummary(world: WorldState): object {
     avgViability: avgViability.toFixed(3),
     activeQuests: getActiveQuests(world).length,
     dungeonRooms: world.dungeonRooms.length,
+    environment,
   };
 }

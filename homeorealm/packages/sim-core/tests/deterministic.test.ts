@@ -25,6 +25,9 @@ describe('Deterministic simulation', () => {
     const set1 = Object.values(r1.finalWorld.settlements)[0]!;
     const set2 = Object.values(r2.finalWorld.settlements)[0]!;
     expect(set1.resources.food.toFixed(4)).toBe(set2.resources.food.toFixed(4));
+    expect(r1.finalWorld.environment.weather).toBe(r2.finalWorld.environment.weather);
+    expect(r1.finalWorld.environment.physics.airTemperatureC.toFixed(4)).toBe(r2.finalWorld.environment.physics.airTemperatureC.toFixed(4));
+    expect(r1.finalWorld.environment.chemistry.soilPH.toFixed(4)).toBe(r2.finalWorld.environment.chemistry.soilPH.toFixed(4));
   });
 
   it('different seeds produce different outcomes', () => {
@@ -46,6 +49,8 @@ describe('Deterministic simulation', () => {
     expect(result.finalWorld.day).toBe(30);
     const alive = Object.values(result.finalWorld.npcs).filter(n => n.isAlive).length;
     expect(alive).toBeGreaterThan(0);
+    expect(result.finalWorld.environment.physics.soilMoisture).toBeGreaterThanOrEqual(0);
+    expect(result.finalWorld.environment.chemistry.corrosion).toBeGreaterThanOrEqual(0);
   });
 
   it('seeded RNG produces consistent values', () => {

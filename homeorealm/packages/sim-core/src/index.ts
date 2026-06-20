@@ -17,6 +17,8 @@ export * from './npc/npcState.js';
 export * from './npc/lineage.js';
 export * from './npc/schedules.js';
 
+export * from './player/playerState.js';
+
 export * from './settlement/economy.js';
 export * from './settlement/jobs.js';
 export * from './settlement/households.js';
@@ -28,6 +30,8 @@ export * from './quests/questTypes.js';
 export * from './quests/questScoring.js';
 
 export * from './dungeon/dungeonTopogenesis.js';
+
+export * from './environment/environment.js';
 
 export * from './simulation/tick.js';
 export * from './simulation/initializeWorld.js';

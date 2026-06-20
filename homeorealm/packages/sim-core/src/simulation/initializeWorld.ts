@@ -9,6 +9,8 @@ import { createRng } from '../rng.js';
 import { nextId, resetIdCounter } from '../ids.js';
 import type { NPCArchetype } from '../npc/npcState.js';
 import { getJobsForSettlement } from '../settlement/jobs.js';
+import { createPlayer } from '../player/playerState.js';
+import { createInitialEnvironment } from '../environment/environment.js';
 
 export const DEMO_ARCHETYPES: NPCArchetype[] = [
   {
@@ -142,6 +144,8 @@ export function initializeWorld(seed: number, npcCount: number = 25): { world: W
     households,
     quests: {},
     dungeonRooms: [],
+    environment: createInitialEnvironment(seed, settlement.regionId),
+    player: createPlayer(settlementId),
   };
 
   return { world, eventStore };

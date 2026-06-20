@@ -21,6 +21,8 @@ async function post<T>(path: string, body?: unknown): Promise<T> {
 export const api = {
   getWorld: () => get<WorldSummary>('/world'),
   getFullWorld: () => get<any>('/world/full'),
+  getPlayer: () => get<PlayerState>('/player'),
+  playerAction: (action: PlayerActionInput) => post<PlayerActionResponse>('/player/action', action),
   tick: () => post<{ day: number; summary: WorldSummary }>('/world/tick'),
   runDays: (days: number) => post<{ day: number; summary: WorldSummary }>('/world/run', { days }),
   resetWorld: (seed: number, npcCount?: number) => post<{ message: string; day: number }>('/world/reset', { seed, npcCount }),
@@ -60,6 +62,89 @@ export type WorldSummary = {
   avgViability: string;
   activeQuests: number;
   dungeonRooms: number;
+  environment: EnvironmentState;
+};
+
+export type EnvironmentalPhysics = {
+  airTemperatureC: number;
+  humidity: number;
+  rainfallMm: number;
+  windSpeedMps: number;
+  windDirectionDeg: number;
+  airPressureKpa: number;
+  soilMoisture: number;
+  groundwater: number;
+  evaporationRate: number;
+  turbulence: number;
+};
+
+export type EnvironmentalChemistry = {
+  oxygenRatio: number;
+  carbonDioxidePpm: number;
+  soilPH: number;
+  mineralSaturation: number;
+  dissolvedIron: number;
+  organicMatter: number;
+  fermentation: number;
+  corrosion: number;
+};
+
+export type EnvironmentState = {
+  regionId: string;
+  season: string;
+  weather: 'clear' | 'mist' | 'rain' | 'storm' | 'dry_heat' | 'frost';
+  physics: EnvironmentalPhysics;
+  chemistry: EnvironmentalChemistry;
+  signals: string[];
+};
+
+export type PlayerActionInput = {
+  type:
+    | 'accept_quest'
+    | 'complete_quest'
+    | 'aid_settlement'
+    | 'travel'
+    | 'gather'
+    | 'rest'
+    | 'train'
+    | 'trade'
+    | 'talk'
+    | 'delve_dungeon';
+  questId?: string;
+  settlementId?: string;
+  location?: PlayerLocation;
+  npcId?: string;
+};
+
+export type PlayerLocation = 'town' | 'market' | 'wilds' | 'dungeon' | 'home';
+
+export type PlayerQuestRecord = {
+  questId: string;
+  status: 'accepted' | 'completed';
+  acceptedOnDay: number;
+  completedOnDay?: number;
+};
+
+export type PlayerState = {
+  id: string;
+  name: string;
+  settlementId: string;
+  location: PlayerLocation;
+  health: number;
+  stamina: number;
+  level: number;
+  experience: number;
+  skills: Record<string, number>;
+  wealth: number;
+  reputation: Record<string, number>;
+  inventory: { itemId: string; quantity: number }[];
+  questLog: PlayerQuestRecord[];
+  actionLog: string[];
+};
+
+export type PlayerActionResponse = {
+  player: PlayerState;
+  message: string;
 };
 
 export type Resources = {
@@ -126,9 +211,25 @@ export type Quest = {
   urgency: number; difficulty: number; isActive: boolean;
   objectives: { description: string; completed: boolean; type: string }[];
   tags: string[]; generatedOnDay: number; issuerNpcId?: string;
+  acceptedByPlayerId?: string; completedByPlayerId?: string;
 };
 
-export type Region = { id: string; name: string; description: string; climate: string; mainResources: string[] };
-export type Faction = { id: string; name: string; description: string; function: string };
-export type People = { id: string; name: string; description: string; assetTheme: string; culturalTraits: string[] };
-export type Asset = { id: string; category: string; name: string; description: string; gameplayUse: string; visualKeywords: string[]; productionPriority: string };
+export type Region = { id: string; name: string; description: string; climate: string; mainResources: string[]; faction?: string };
+export type Faction = { id: string; name: string; description: string; function: string; allegiances?: string[] };
+export type People = { id: string; name: string; region: string; description: string; assetTheme: string; culturalTraits: string[] };
+export type Asset = {
+  id: string;
+  category: string;
+  name: string;
+  region?: string;
+  faction?: string;
+  description: string;
+  gameplayUse: string;
+  visualKeywords: string[];
+  productionPriority: string;
+  sourceCollection?: string;
+  sourceRepository?: string;
+  sourceUrl?: string;
+  sourceLicense?: string;
+  localAssetUrl?: string;
+};

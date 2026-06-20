@@ -177,6 +177,41 @@ export type SettlementState = {
   day: number;
 };
 
+// Physics and chemistry model for the playable environment. Values are
+// normalized unless a physical unit is explicitly included in the name.
+export type EnvironmentalPhysics = {
+  airTemperatureC: number;
+  humidity: number;
+  rainfallMm: number;
+  windSpeedMps: number;
+  windDirectionDeg: number;
+  airPressureKpa: number;
+  soilMoisture: number;
+  groundwater: number;
+  evaporationRate: number;
+  turbulence: number;
+};
+
+export type EnvironmentalChemistry = {
+  oxygenRatio: number;
+  carbonDioxidePpm: number;
+  soilPH: number;
+  mineralSaturation: number;
+  dissolvedIron: number;
+  organicMatter: number;
+  fermentation: number;
+  corrosion: number;
+};
+
+export type EnvironmentState = {
+  regionId: string;
+  season: string;
+  weather: 'clear' | 'mist' | 'rain' | 'storm' | 'dry_heat' | 'frost';
+  physics: EnvironmentalPhysics;
+  chemistry: EnvironmentalChemistry;
+  signals: string[];
+};
+
 // ─── Quests ────────────────────────────────────────────────────────────────
 
 export type QuestObjective = {
@@ -219,6 +254,39 @@ export type EmergentQuest = {
   tags: string[];
   generatedOnDay: number;
   isActive: boolean;
+  acceptedByPlayerId?: string;
+  completedByPlayerId?: string;
+};
+
+export type PlayerInventoryItem = {
+  itemId: string;
+  quantity: number;
+};
+
+export type PlayerQuestStatus = 'accepted' | 'completed';
+
+export type PlayerQuestRecord = {
+  questId: string;
+  status: PlayerQuestStatus;
+  acceptedOnDay: number;
+  completedOnDay?: number;
+};
+
+export type PlayerState = {
+  id: string;
+  name: string;
+  settlementId: string;
+  location: 'town' | 'market' | 'wilds' | 'dungeon' | 'home';
+  health: number;
+  stamina: number;
+  level: number;
+  experience: number;
+  skills: Record<string, number>;
+  wealth: number;
+  reputation: Record<string, number>;
+  inventory: PlayerInventoryItem[];
+  questLog: PlayerQuestRecord[];
+  actionLog: string[];
 };
 
 // ─── World State ───────────────────────────────────────────────────────────
@@ -232,6 +300,8 @@ export type WorldState = {
   households: Record<string, HouseholdState>;
   quests: Record<string, EmergentQuest>;
   dungeonRooms: DungeonRoom[];
+  environment: EnvironmentState;
+  player?: PlayerState;
 };
 
 // ─── Dungeon ───────────────────────────────────────────────────────────────

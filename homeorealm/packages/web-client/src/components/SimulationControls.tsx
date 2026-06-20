@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { api, type WorldEvent } from '../api.js';
 
-export function SimulationControls() {
+type Props = { onTick?: () => void };
+
+export function SimulationControls({ onTick }: Props) {
   const [day, setDay] = useState(0);
   const [running, setRunning] = useState(false);
   const [events, setEvents] = useState<WorldEvent[]>([]);
@@ -22,6 +24,7 @@ export function SimulationControls() {
       const evs = await api.getEvents();
       setEvents(evs);
       setMessage(`Day ${result.day} complete.`);
+      onTick?.();
     } catch {
       setMessage('Tick failed — is the server running?');
     }
@@ -37,6 +40,7 @@ export function SimulationControls() {
       const evs = await api.getEvents();
       setEvents(evs);
       setMessage(`Advanced to day ${result.day}.`);
+      onTick?.();
     } catch {
       setMessage('Run failed — is the server running?');
     }
@@ -51,6 +55,7 @@ export function SimulationControls() {
       setDay(w.day);
       setEvents([]);
       setMessage('World reset to day 0 (seed: 12345).');
+      onTick?.();
     } catch {
       setMessage('Reset failed.');
     }

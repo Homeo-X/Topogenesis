@@ -3,7 +3,7 @@
     "id": "Aurans",
     "name": "Aurans",
     "region": "crown_valley",
-    "description": "Valley settlers with strong civic traditions; warm communities, practical craft, and bread-festival culture.",
+    "description": "Valley settlers who measure trust in shared meals, repaired fences, and remembered birthdays. They are warm, practical, and terrifyingly organized when a festival is at stake.",
     "assetTheme": "Warm textiles, practical tools, family crests, bread/festival iconography, civic uniforms.",
     "culturalTraits": ["communal", "industrious", "traditionalist", "civic-minded"]
   },
@@ -11,7 +11,7 @@
     "id": "Mireborn",
     "name": "Mireborn",
     "region": "mireglass",
-    "description": "Wetland lineage; deeply connected to memory and mourning rites; skilled herbalists and memory-keepers.",
+    "description": "Wetland lineages who treat memory as a living ecosystem. They mourn beautifully, forgive slowly, and know which herbs help the dead speak softly.",
     "assetTheme": "Reflective glass jewelry, reed houses, mourning veils, memory lanterns, herbal masks.",
     "culturalTraits": ["mournful", "perceptive", "memory-focused", "herbal-wise"]
   },
@@ -19,7 +19,7 @@
     "id": "Ashkin",
     "name": "Ashkin",
     "region": "ash_ring",
-    "description": "Volcanic border people; fierce, honorable, skilled in metalcraft; warriors with deep ritual traditions.",
+    "description": "Volcanic border people raised around watchfires, oath songs, and ironwork. They are fierce without being careless, and their rituals make even silence feel armed.",
     "assetTheme": "Dark metal armor, red ceramic charms, ember tattoos, basalt architecture.",
     "culturalTraits": ["martial", "honorable", "stoic", "ritual-bound"]
   },
@@ -27,7 +27,7 @@
     "id": "Coastfolk",
     "name": "Coastfolk",
     "region": "saffron_coast",
-    "description": "Maritime culture; traders, fishers, and sailors; welcoming to immigrants and prone to festival excess.",
+    "description": "Maritime families of traders, fishers, sailors, cooks, and dock poets. They welcome strangers quickly, haggle theatrically, and celebrate as if tomorrow's tide is not guaranteed.",
     "assetTheme": "Sails, shell ornaments, blue-green dyes, fish markets, rope bridges, shipboard shrines.",
     "culturalTraits": ["welcoming", "mercantile", "adventurous", "festive"]
   },
@@ -35,7 +35,7 @@
     "id": "Highroot Clans",
     "name": "Highroot Clans",
     "region": "highroot",
-    "description": "Canopy dwellers; ecological stewards with deep knowledge of forest systems and animal behavior.",
+    "description": "Canopy dwellers who read rain, bark, bird calls, and animal moods as civic advice. They move patiently because the forest has already survived every empire.",
     "assetTheme": "Layered leaf cloaks, carved wood, animal motifs, vertical village assets.",
     "culturalTraits": ["ecological", "patient", "animist", "cooperative"]
   },
@@ -43,7 +43,7 @@
     "id": "North Archive Houses",
     "name": "North Archive Houses",
     "region": "quiet_north",
-    "description": "Snow scholars; keepers of ancestral records and topogenic lore; cold-adapted and deeply analytical.",
+    "description": "Snow scholars and archive families who keep ancestral law under cold lamps. They are analytical, formal, and quietly sentimental about names that survived winter.",
     "assetTheme": "Pale stone, fur-lined robes, runic ledgers, cold-light lamps, archive vaults.",
     "culturalTraits": ["scholarly", "disciplined", "ancestral", "analytical"]
   }

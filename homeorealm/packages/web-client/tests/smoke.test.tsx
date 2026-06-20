@@ -15,6 +15,23 @@ vi.mock('../src/api.js', () => ({
     getNPCs: vi.fn().mockResolvedValue([]),
     getWorld: vi.fn().mockResolvedValue({ day: 0, settlements: [], totalNPCs: 0, avgViability: '0%', activeQuests: 0, dungeonRooms: 0 }),
     getEvents: vi.fn().mockResolvedValue([]),
+    getPlayer: vi.fn().mockResolvedValue({
+      id: 'player_1',
+      name: 'Wayfarer',
+      settlementId: 'set_1',
+      location: 'town',
+      health: 1,
+      stamina: 1,
+      level: 1,
+      experience: 0,
+      skills: {},
+      wealth: 20,
+      reputation: { set_1: 0.1 },
+      inventory: [],
+      questLog: [],
+      actionLog: [],
+    }),
+    playerAction: vi.fn().mockResolvedValue({ message: 'ok', player: {} }),
   },
 }));
 

@@ -16,6 +16,7 @@ import { generateEmergentQuests } from '../quests/questGenerator.js';
 import { expireQuests } from '../quests/questTypes.js';
 import { generateDungeonRooms, refreshDungeonRooms } from '../dungeon/dungeonTopogenesis.js';
 import { createRng } from '../rng.js';
+import { advanceEnvironment, ensureEnvironment } from '../environment/environment.js';
 
 export type TickOptions = {
   logSummary?: boolean;
@@ -33,6 +34,7 @@ export function tickDay(world: WorldState, eventStore: EventStore, opts: TickOpt
   let settlements = { ...world.settlements };
   let quests = { ...world.quests };
   let dungeonRooms = [...world.dungeonRooms];
+  let environment = ensureEnvironment(world.environment, seed, Object.values(settlements)[0]?.regionId);
 
   // ─── Per-settlement daily update ───────────────────────────────────────
   for (const settlementId of Object.keys(settlements)) {
@@ -41,11 +43,14 @@ export function tickDay(world: WorldState, eventStore: EventStore, opts: TickOpt
     const settlementRng = dayRng.fork(settlementId);
 
     // Resource consumption
-    const { resources: updatedResources, shortages } = applyDailyConsumption(
+    const { resources: consumedResources, shortages } = applyDailyConsumption(
       settlement.resources,
       settlement.population,
       seasonal,
     );
+    const environmentUpdate = advanceEnvironment(environment, settlement, day, seed);
+    environment = environmentUpdate.environment;
+    const updatedResources = applyResourceDelta(consumedResources, environmentUpdate.resourceDeltas);
 
     // Emit shortage events
     for (const shortage of shortages) {
@@ -58,11 +63,21 @@ export function tickDay(world: WorldState, eventStore: EventStore, opts: TickOpt
         salience: 0.7,
       });
     }
+    for (const event of environmentUpdate.events) {
+      eventStore.append({
+        day, tick: 0,
+        type: event.type,
+        settlementId,
+        payload: event.payload,
+        tags: event.tags,
+        salience: event.salience,
+      });
+    }
 
     settlements[settlementId] = { ...settlement, resources: updatedResources, day };
 
     // Generate quests from pressures
-    const worldForQuests: WorldState = { ...world, settlements, npcs, households, quests, dungeonRooms, day };
+    const worldForQuests: WorldState = { ...world, settlements, npcs, households, quests, dungeonRooms, day, environment };
     const newQuests = generateEmergentQuests(worldForQuests, settlementId, settlementRng);
     for (const q of newQuests) {
       quests[q.id] = q;
@@ -134,12 +149,12 @@ export function tickDay(world: WorldState, eventStore: EventStore, opts: TickOpt
       npc = { ...npc, currentIntention: { action: 'attend_festival', motivation: 'seasonal festival', expectedViabilityGain: 0.15 } };
     } else {
       // 7. Select intention from viability loop
-      const worldSnapshot: WorldState = { ...world, settlements, npcs, households, quests, dungeonRooms, day };
+      const worldSnapshot: WorldState = { ...world, settlements, npcs, households, quests, dungeonRooms, day, environment };
       npc = { ...npc, currentIntention: selectIntention(npc, household, settlement.resources, day, npcRng) };
     }
 
     // 8. Execute action
-    const worldForAction: WorldState = { ...world, settlements, npcs, households, quests, dungeonRooms, day };
+    const worldForAction: WorldState = { ...world, settlements, npcs, households, quests, dungeonRooms, day, environment };
     const result = executeAction(npc, npc.currentIntention!, household, settlement.resources, clock, eventStore, worldForAction);
 
     // Apply needs updates from action
@@ -221,5 +236,5 @@ export function tickDay(world: WorldState, eventStore: EventStore, opts: TickOpt
     households[hhId] = consumeHouseholdFood(hh, members);
   }
 
-  return { seed, day, tick: 0, settlements, npcs, households, quests, dungeonRooms };
+  return { seed, day, tick: 0, settlements, npcs, households, quests, dungeonRooms, environment, player: world.player };
 }

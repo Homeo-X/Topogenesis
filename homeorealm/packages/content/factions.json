@@ -2,49 +2,49 @@
   {
     "id": "hearthwardens",
     "name": "Hearthwardens",
-    "description": "Civic stewards who maintain Hearthwell viability, approve public works, and lead crisis response.",
+    "description": "Civic stewards who maintain Hearthwell viability, approve public works, and ring the brass crisis bell when a settlement starts slipping out of balance.",
     "function": "Hearthwell maintenance and civic governance",
     "allegiances": ["crown_valley", "mireglass"]
   },
   {
     "id": "ledger_houses",
     "name": "Ledger Houses",
-    "description": "Archivists who track ancestry, property, contracts, memory disputes, and historical legitimacy.",
+    "description": "Archivists who track ancestry, contracts, property, and memory disputes. Their ledgers can restore a family name or quietly erase a lie from public life.",
     "function": "Lineage records, contracts, and memory governance",
     "allegiances": ["mireglass", "quiet_north"]
   },
   {
     "id": "green_apron_guild",
     "name": "The Green Apron Guild",
-    "description": "Farmers, cooks, brewers, fishers, and herbalists. They control food stability and festival provisions.",
+    "description": "Farmers, cooks, brewers, fishers, and herbalists who treat food as civic magic. No festival, rescue convoy, or wedding feast happens without their apron seal.",
     "function": "Food production and festival management",
     "allegiances": ["crown_valley", "highroot", "saffron_coast"]
   },
   {
     "id": "votive_smiths",
     "name": "Votive Smiths",
-    "description": "Crafters who bind tools to vows, professions, family lines, and town history.",
+    "description": "Crafters who bind tools to vows, professions, family lines, and town history. A Votive Smith never asks what a blade is for only what promise will haunt it.",
     "function": "Tool crafting and oath binding",
     "allegiances": ["ash_ring"]
   },
   {
     "id": "wayfarer_compact",
     "name": "Wayfarer Compact",
-    "description": "Adventurer network that maps rifts, escorts caravans, and reports anomalous topogenic changes.",
+    "description": "A loose adventurer network that maps rifts, escorts caravans, and reports topogenic anomalies before tavern rumors turn them into panic.",
     "function": "Exploration, cartography, and escort services",
     "allegiances": ["saffron_coast", "ash_ring"]
   },
   {
     "id": "null_choir",
     "name": "The Null Choir",
-    "description": "Philosophical cult that believes all distinctions cause suffering and should dissolve back into the White Quiet.",
+    "description": "A philosophical cult that believes names, borders, jobs, kinship, and desire are wounds in the world. They sing for everything to dissolve into the White Quiet.",
     "function": "Ideological disruption and philosophical challenge",
     "allegiances": ["subframe_labyrinth"]
   },
   {
     "id": "kinless_court",
     "name": "Kinless Court",
-    "description": "A political faction for immigrants, orphans, exiles, unmarried NPCs, and players without local family ties.",
+    "description": "A political refuge for immigrants, orphans, exiles, unmarried residents, and players without local family ties. They bargain hard for people the old ledgers overlook.",
     "function": "Advocacy for the unaffiliated and immigrant rights",
     "allegiances": ["crown_valley", "saffron_coast"]
   }

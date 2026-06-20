@@ -5,6 +5,7 @@ type NavItem = { label: string; view: string };
 const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', view: 'dashboard' },
   { label: '3D World', view: 'world3d' },
+  { label: 'Maps', view: 'maps' },
   { label: 'NPCs', view: 'npcs' },
   { label: 'Quests', view: 'quests' },
   { label: 'Settlement', view: 'settlement' },
@@ -14,9 +15,35 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Dungeons', view: 'dungeons' },
 ];
 
-type Props = { activeView: string; onNavigate: (v: string) => void; children: ReactNode };
+const SPEED_OPTIONS = [
+  { label: 'Calm', ms: 5000 },
+  { label: 'Normal', ms: 3000 },
+  { label: 'Fast', ms: 1200 },
+];
 
-export function Layout({ activeView, onNavigate, children }: Props) {
+type Props = {
+  activeView: string;
+  onNavigate: (v: string) => void;
+  children: ReactNode;
+  worldDay: number;
+  autoRun: boolean;
+  speedMs: number;
+  clockBusy: boolean;
+  onToggleAutoRun: () => void;
+  onSpeedChange: (ms: number) => void;
+};
+
+export function Layout({
+  activeView,
+  onNavigate,
+  children,
+  worldDay,
+  autoRun,
+  speedMs,
+  clockBusy,
+  onToggleAutoRun,
+  onSpeedChange,
+}: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   function handleNav(v: string) {
@@ -24,7 +51,6 @@ export function Layout({ activeView, onNavigate, children }: Props) {
     setMenuOpen(false);
   }
 
-  // Close drawer on Escape
   useEffect(() => {
     if (!menuOpen) return;
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpen(false); };
@@ -35,7 +61,7 @@ export function Layout({ activeView, onNavigate, children }: Props) {
   return (
     <div className="layout">
       <header className="top-bar">
-        <div className="logo">⬡ HomeoRealm</div>
+        <div className="logo">HomeoRealm</div>
         <nav className={menuOpen ? 'open' : ''} onClick={e => { if (e.target === e.currentTarget) setMenuOpen(false); }}>
           {NAV_ITEMS.map(item => (
             <button
@@ -47,13 +73,30 @@ export function Layout({ activeView, onNavigate, children }: Props) {
             </button>
           ))}
         </nav>
+        <div className="world-clock" aria-label="World clock">
+          <span className="clock-day">Day {worldDay}</span>
+          <button className={autoRun ? 'clock-toggle running' : 'clock-toggle'} onClick={onToggleAutoRun}>
+            {autoRun ? 'Pause' : 'Auto'}
+          </button>
+          <select
+            className="clock-speed"
+            value={speedMs}
+            onChange={e => onSpeedChange(Number(e.target.value))}
+            aria-label="Simulation speed"
+          >
+            {SPEED_OPTIONS.map(option => (
+              <option key={option.ms} value={option.ms}>{option.label}</option>
+            ))}
+          </select>
+          {clockBusy && <span className="clock-pulse" aria-label="Advancing" />}
+        </div>
         <button
           className="hamburger"
           onClick={() => setMenuOpen(o => !o)}
           aria-label={menuOpen ? 'Close menu' : 'Open menu'}
           aria-expanded={menuOpen}
         >
-          {menuOpen ? '✕' : '☰'}
+          {menuOpen ? 'Close' : 'Menu'}
         </button>
       </header>
       <main className="content">{children}</main>

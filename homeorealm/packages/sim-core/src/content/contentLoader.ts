@@ -90,6 +90,11 @@ export const AssetManifestEntrySchema = z.object({
   gameplayUse: z.string(),
   visualKeywords: z.array(z.string()),
   productionPriority: z.enum(['mvp', 'vertical-slice', 'alpha', 'later']),
+  sourceCollection: z.string().optional(),
+  sourceRepository: z.string().optional(),
+  sourceUrl: z.string().url().optional(),
+  sourceLicense: z.string().optional(),
+  localAssetUrl: z.string().optional(),
 });
 
 export type Region = z.infer<typeof RegionSchema>;

@@ -4,6 +4,7 @@ import { writeFileSync, readFileSync, existsSync } from 'fs';
 import type { WorldState } from '@homeorealm/sim-core';
 import { createEventStore, type EventStore } from '@homeorealm/sim-core';
 import { initializeWorld } from '@homeorealm/sim-core';
+import { ensureEnvironment } from '@homeorealm/sim-core';
 
 export type AppState = {
   world: WorldState;
@@ -46,7 +47,11 @@ export function loadSnapshot(path: string): boolean {
     const raw = JSON.parse(readFileSync(path, 'utf-8'));
     const eventStore = createEventStore();
     eventStore.importSnapshot(raw.events);
-    _state = { world: raw.world, eventStore };
+    const world = raw.world as WorldState;
+    _state = {
+      world: { ...world, environment: ensureEnvironment(world.environment, world.seed, Object.values(world.settlements)[0]?.regionId) },
+      eventStore,
+    };
     return true;
   } catch {
     return false;

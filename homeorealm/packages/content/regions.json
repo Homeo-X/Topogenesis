@@ -2,7 +2,7 @@
   {
     "id": "crown_valley",
     "name": "The Crown Valley",
-    "description": "Central pastoral kingdom; farms, markets, marriage houses, academies, public festivals, and royal bureaucracy. Best starting zone.",
+    "description": "A warm valley kingdom where bread ovens, marriage houses, lesson halls, and market bells all orbit the Hearthwell. It is the safest starting home, but every family here knows the well can hear an oath breaking.",
     "climate": "temperate",
     "mainResources": ["food", "cloth", "coin"],
     "faction": "hearthwardens"
@@ -10,7 +10,7 @@
   {
     "id": "mireglass",
     "name": "Mireglass Lowlands",
-    "description": "Wetland of reflecting pools that preserve emotional memories. Main zones for herbalism, funeral rites, ghost ecology, and memory quests.",
+    "description": "A wetland of mirror pools where grief becomes light on the water and old promises can be read in ripples. Herbalists, mourners, and memory keepers travel by lantern between reed houses.",
     "climate": "humid",
     "mainResources": ["medicine", "food", "wood"],
     "faction": "ledger_houses"
@@ -18,7 +18,7 @@
   {
     "id": "ash_ring",
     "name": "The Ash-Ring Marches",
-    "description": "Borderlands around old volcanic ruins. Strong monster ecology, smithing resources, military orders, and expedition gameplay.",
+    "description": "Volcanic marches built around ruined watch-forts and oath forges. Ashkin patrols hold the passes while smiths temper tools in mineral heat and monsters nest in cooled lava tubes.",
     "climate": "volcanic",
     "mainResources": ["ore", "tools", "medicine"],
     "faction": "votive_smiths"
@@ -26,7 +26,7 @@
   {
     "id": "saffron_coast",
     "name": "Saffron Coast",
-    "description": "Trade ports, fishing guilds, shipwrights, migrant NPC cultures, culinary economy, piracy, and maritime festivals.",
+    "description": "A chain of bright ports where salt pans, fish markets, sail shrines, and immigrant quarters trade news faster than coin. Every festival smells of saffron, brine, and risky bargains.",
     "climate": "coastal",
     "mainResources": ["food", "coin", "cloth"],
     "faction": "wayfarer_compact"
@@ -34,7 +34,7 @@
   {
     "id": "highroot",
     "name": "Highroot Canopy",
-    "description": "Vertical forest settlements, druidic biotech, animal husbandry, rare woods, archery, and ecological governance.",
+    "description": "A vertical forest society of rope bridges, rain drums, carved lifts, and canopy gardens. The Highroot Clans govern by listening to trees, animals, and weather before they vote.",
     "climate": "forest",
     "mainResources": ["wood", "food", "medicine"],
     "faction": "green_apron_guild"
@@ -42,7 +42,7 @@
   {
     "id": "quiet_north",
     "name": "The Quiet North",
-    "description": "Snow provinces where time feels thin. High-level survival, ancestral spirits, archive temples, winter politics, and rare topogenic minerals.",
+    "description": "Snow provinces where time feels thin and every road has ancestor stones watching it. Archive houses keep cold lamps burning over lineage secrets and rare topogenic crystals.",
     "climate": "arctic",
     "mainResources": ["ore", "medicine", "cloth"],
     "faction": "ledger_houses"
@@ -50,7 +50,7 @@
   {
     "id": "subframe_labyrinth",
     "name": "The Subframe Labyrinth",
-    "description": "Dynamic dungeon layer under all Hearthwells. Its rooms reconfigure according to unresolved social, ecological, and metaphysical pressures.",
+    "description": "A dynamic dungeon layer below every Hearthwell. Its rooms reassemble around unresolved hunger, fear, rivalry, and taboo, turning civic pressure into corridors you can walk.",
     "climate": "subterranean",
     "mainResources": ["ore", "medicine"],
     "faction": "null_choir"

@@ -54,6 +54,8 @@ export function WorldDashboard({ onTick }: Props) {
         <StatCard label="Dungeon Rooms" value={String(world.dungeonRooms)} />
       </div>
 
+      <EnvironmentPanel world={world} />
+
       {r && (
         <div className="resource-panel">
           <h3>Settlement Resources — {s?.name}</h3>
@@ -73,6 +75,45 @@ export function WorldDashboard({ onTick }: Props) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function EnvironmentPanel({ world }: { world: WorldSummary }) {
+  const env = world.environment;
+  const p = env.physics;
+  const c = env.chemistry;
+  return (
+    <div className="resource-panel environment-panel">
+      <h3>Physics & Chemistry Layer</h3>
+      <div className="environment-grid">
+        <EnvMetric label="Weather" value={env.weather.replace('_', ' ')} />
+        <EnvMetric label="Season" value={env.season} />
+        <EnvMetric label="Temp" value={`${p.airTemperatureC.toFixed(1)} C`} />
+        <EnvMetric label="Humidity" value={`${Math.round(p.humidity * 100)}%`} />
+        <EnvMetric label="Rainfall" value={`${p.rainfallMm.toFixed(1)} mm`} />
+        <EnvMetric label="Wind" value={`${p.windSpeedMps.toFixed(1)} m/s`} />
+        <EnvMetric label="Soil pH" value={c.soilPH.toFixed(2)} />
+        <EnvMetric label="CO2" value={`${c.carbonDioxidePpm} ppm`} />
+        <EnvMetric label="Oxygen" value={`${(c.oxygenRatio * 100).toFixed(1)}%`} />
+        <EnvMetric label="Fermentation" value={`${Math.round(c.fermentation * 100)}%`} />
+        <EnvMetric label="Corrosion" value={`${Math.round(c.corrosion * 100)}%`} />
+        <EnvMetric label="Minerals" value={`${Math.round(c.mineralSaturation * 100)}%`} />
+      </div>
+      {env.signals.length > 0 && (
+        <div className="environment-signals">
+          {env.signals.map((signal) => <span key={signal}>{signal}</span>)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EnvMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="env-metric">
+      <span>{label}</span>
+      <strong>{value}</strong>
     </div>
   );
 }
