@@ -160,7 +160,6 @@ function ActionButtons({
 // ─── Main component ────────────────────────────────────────────────────────
 
 export function WorldView3D() {
-  const [locked, setLocked] = useState(false);
   const [day, setDay] = useState(0);
   const [npcs, setNpcs] = useState<NPCSummary[]>([]);
   const [settlement, setSettlement] = useState<Settlement | null>(null);
@@ -168,6 +167,7 @@ export function WorldView3D() {
   const [selectedNPC, setSelectedNPC] = useState<NPCSummary | null>(null);
   const [nearbyNPCs, setNearbyNPCs] = useState<NPCSummary[]>([]);
   const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+  const fallbackControls = !isMobile;
 
   const joystickAxisRef = useRef({ x: 0, y: 0 });
   const cameraYawRef = useRef(0);
@@ -182,7 +182,6 @@ export function WorldView3D() {
 
   function handleSelectNPC(npc: NPCSummary | null) {
     setSelectedNPC(npc);
-    if (npc) setLocked(false);
   }
 
   function refreshWorld() {
@@ -213,7 +212,6 @@ export function WorldView3D() {
             settlement={settlement}
             environment={environment}
             isMobile={isMobile}
-            onLockChange={setLocked}
             onSelectNPC={handleSelectNPC}
             onNearbyNPCs={setNearbyNPCs}
             joystickAxisRef={joystickAxisRef}
@@ -229,22 +227,9 @@ export function WorldView3D() {
         {!isMobile && <PlayerHUD nearbyNPCs={nearbyNPCs} onWorldChanged={refreshWorld} />}
         {environment && !isMobile && <PhysicsChemistryHUD environment={environment} />}
 
-        {/* Desktop: pre-lock prompt */}
-        {!isMobile && !locked && !selectedNPC && (
-          <div className="enter-3d-prompt">
-            <div className="enter-3d-title">{settlement?.name ?? 'Auralis'}</div>
-            <div className="enter-3d-day">Day {day}</div>
-            <p className="enter-3d-sub">Click anywhere to enter first-person view</p>
-            <p className="enter-3d-hint">WASD / Arrow keys — move · Mouse — look · E — talk · ESC — exit</p>
-          </div>
-        )}
-
-        {/* Desktop: in-game HUD */}
-        {!isMobile && locked && (
+        {/* Desktop: safe embedded controls HUD */}
+        {fallbackControls && (
           <>
-            <div className="crosshair-3d">
-              <span className="ch-h" /><span className="ch-v" />
-            </div>
             <div className="hud-3d-top">
               <span className="hud-3d-settlement">{settlement?.name ?? 'Auralis'}</span>
               <span className="hud-3d-day">Day {day}</span>
@@ -261,7 +246,7 @@ export function WorldView3D() {
                 <div className="interact-prompt">Press E to talk</div>
               </div>
             )}
-            <div className="hud-3d-esc">ESC to exit</div>
+            <div className="hud-3d-esc">WASD move / drag to look</div>
           </>
         )}
 

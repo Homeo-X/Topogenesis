@@ -1,8 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
-import { api, type DungeonRoom, type EnvironmentState, type NPCSummary, type Quest, type Region, type Settlement, type WorldSummary } from '../api.js';
+import { api, type DungeonRoom, type EnvironmentState, type NPCSummary, type PlayerActionInput, type PlayerState, type Quest, type Region, type Settlement, type WorldSummary } from '../api.js';
 
 type MapMode = 'world' | 'region' | 'area';
 type Overlay = 'terrain' | 'climate' | 'resources' | 'travel' | 'pressure';
+type FocusKind = 'region' | 'resource' | 'settlement' | 'district' | 'resident' | 'quest' | 'dungeon' | 'player';
+
+type MapFocus = {
+  id: string;
+  kind: FocusKind;
+  title: string;
+  body: string;
+  tags: string[];
+};
 
 type RegionShape = {
   id: string;
@@ -143,6 +152,24 @@ const AREA_LAYERS = [
   { id: 'rupture', label: 'Subframe Rupture', x: 238, y: 110, w: 110, h: 76, color: '#40305f' },
 ];
 
+const PLAYER_AREA_POS: Record<PlayerState['location'], [number, number]> = {
+  town: [506, 318],
+  market: [674, 318],
+  wilds: [250, 168],
+  dungeon: [250, 168],
+  home: [330, 190],
+};
+
+const MAP_ACTIONS: Array<{ label: string; action: PlayerActionInput; tone?: 'primary' | 'danger' }> = [
+  { label: 'Town', action: { type: 'travel', location: 'town' } },
+  { label: 'Market', action: { type: 'travel', location: 'market' } },
+  { label: 'Wilds', action: { type: 'travel', location: 'wilds' } },
+  { label: 'Gather', action: { type: 'gather' }, tone: 'primary' },
+  { label: 'Trade', action: { type: 'trade' } },
+  { label: 'Delve', action: { type: 'delve_dungeon' }, tone: 'danger' },
+  { label: 'Rest', action: { type: 'rest' } },
+];
+
 function titleCase(value: string): string {
   return value
     .split(/[_-]/g)
@@ -155,41 +182,76 @@ function regionById(id: string): RegionShape {
   return REGION_SHAPES.find((region) => region.id === id) ?? REGION_SHAPES[3]!;
 }
 
+function makeFocus(kind: FocusKind, id: string, title: string, body: string, tags: string[] = []): MapFocus {
+  return { kind, id, title, body, tags };
+}
+
 export function MapAtlas() {
   const [mode, setMode] = useState<MapMode>('world');
   const [overlay, setOverlay] = useState<Overlay>('terrain');
   const [selectedRegionId, setSelectedRegionId] = useState('crown_valley');
+  const [focus, setFocus] = useState<MapFocus>(() => makeFocus('region', 'crown_valley', 'Crown Valley', 'The starting heartland: farms, marriage houses, market roads, and a watchful Hearthwell.', ['safe start', 'bread roads']));
   const [world, setWorld] = useState<WorldSummary | null>(null);
   const [regions, setRegions] = useState<Region[]>([]);
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [npcs, setNpcs] = useState<NPCSummary[]>([]);
   const [quests, setQuests] = useState<Quest[]>([]);
   const [dungeons, setDungeons] = useState<DungeonRoom[]>([]);
+  const [player, setPlayer] = useState<PlayerState | null>(null);
+  const [message, setMessage] = useState('');
+  const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    Promise.all([
+  async function loadAtlas(resetFocus = false) {
+    const [nextWorld, nextRegions, nextSettlements, nextNpcs, nextQuests, nextDungeons, nextPlayer] = await Promise.all([
       api.getWorld(),
       api.getRegions(),
       api.getSettlements(),
       api.getNPCs(),
       api.getQuests(),
       api.getDungeons(),
-    ]).then(([nextWorld, nextRegions, nextSettlements, nextNpcs, nextQuests, nextDungeons]) => {
-      setWorld(nextWorld);
-      setRegions(nextRegions);
-      setSettlements(nextSettlements);
-      setNpcs(nextNpcs);
-      setQuests(nextQuests);
-      setDungeons(nextDungeons);
-      setSelectedRegionId(nextSettlements[0]?.regionId ?? 'crown_valley');
-    }).catch(() => {});
-  }, []);
+      api.getPlayer(),
+    ]);
+
+    setWorld(nextWorld);
+    setRegions(nextRegions);
+    setSettlements(nextSettlements);
+    setNpcs(nextNpcs);
+    setQuests(nextQuests);
+    setDungeons(nextDungeons);
+    setPlayer(nextPlayer);
+
+    const homeRegionId = nextSettlements[0]?.regionId ?? 'crown_valley';
+    setSelectedRegionId((current) => current || homeRegionId);
+    if (resetFocus) {
+      const shape = regionById(homeRegionId);
+      const lore = nextRegions.find((region) => region.id === homeRegionId);
+      setFocus(makeFocus('region', shape.id, shape.label, lore?.description ?? shape.elevation, shape.features));
+    }
+  }
+
+  useEffect(() => { loadAtlas(true).catch(() => {}); }, []);
+
+  async function runMapAction(action: PlayerActionInput) {
+    setBusy(true);
+    setMessage('');
+    try {
+      const result = await api.playerAction(action);
+      setPlayer(result.player);
+      setMessage(result.message);
+      await loadAtlas(false);
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const selectedShape = regionById(selectedRegionId);
   const selectedRegion = regions.find((region) => region.id === selectedRegionId);
   const activeQuests = quests.filter((quest) => quest.isActive);
   const settlement = settlements[0];
   const environment = world?.environment;
+  const route = useMemo(() => computeRouteReadiness(mode, overlay, environment, player, selectedShape), [environment, mode, overlay, player, selectedShape]);
 
   const stats = useMemo(() => ({
     residents: npcs.length,
@@ -226,9 +288,15 @@ export function MapAtlas() {
 
       <div className="map-shell">
         <section className="map-canvas-panel">
-          {mode === 'world' && <WorldMap overlay={overlay} selectedRegionId={selectedRegionId} onSelectRegion={(id) => { setSelectedRegionId(id); setMode('region'); }} settlements={settlements} environment={environment} />}
-          {mode === 'region' && <RegionMap shape={selectedShape} region={selectedRegion} overlay={overlay} settlement={settlement} quests={activeQuests} dungeons={dungeons} environment={environment} />}
-          {mode === 'area' && <AreaMap overlay={overlay} settlement={settlement} npcs={npcs} quests={activeQuests} dungeons={dungeons} environment={environment} />}
+          {mode === 'world' && <WorldMap overlay={overlay} selectedRegionId={selectedRegionId} onSelectRegion={(id) => {
+            const shape = regionById(id);
+            const lore = regions.find((region) => region.id === id);
+            setSelectedRegionId(id);
+            setFocus(makeFocus('region', id, shape.label, lore?.description ?? shape.elevation, shape.features));
+            setMode('region');
+          }} onFocus={setFocus} settlements={settlements} environment={environment} focus={focus} />}
+          {mode === 'region' && <RegionMap shape={selectedShape} region={selectedRegion} overlay={overlay} settlement={settlement} quests={activeQuests} dungeons={dungeons} environment={environment} focus={focus} onFocus={setFocus} />}
+          {mode === 'area' && <AreaMap overlay={overlay} settlement={settlement} npcs={npcs} quests={activeQuests} dungeons={dungeons} environment={environment} player={player} focus={focus} onFocus={setFocus} />}
         </section>
 
         <aside className="map-side-panel">
@@ -257,6 +325,44 @@ export function MapAtlas() {
               </div>
             </div>
           )}
+          <div className="map-detail-block">
+            <h3>Selected</h3>
+            <div className="map-focus-card">
+              <div className="map-focus-kind">{titleCase(focus.kind)}</div>
+              <strong>{focus.title}</strong>
+              <p>{focus.body}</p>
+              {focus.tags.length > 0 && (
+                <div className="map-chip-row compact">
+                  {focus.tags.map((tag) => <span key={tag}>{tag}</span>)}
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="map-detail-block">
+            <h3>Expedition Readiness</h3>
+            <div className="map-route-card">
+              <div className="map-route-head">
+                <span>{route.label}</span>
+                <strong>{Math.round(route.readiness * 100)}%</strong>
+              </div>
+              <div className="map-route-meter">
+                <div className="map-route-fill" style={{ width: `${route.readiness * 100}%`, background: route.color }} />
+              </div>
+              <p>{route.note}</p>
+              {player && <div className="map-kv compact"><span>Position</span><strong>{titleCase(player.location)}</strong><span>Stamina</span><strong>{Math.round(player.stamina * 100)}%</strong></div>}
+            </div>
+          </div>
+          <div className="map-detail-block">
+            <h3>Map Actions</h3>
+            <div className="map-action-grid">
+              {MAP_ACTIONS.map(({ label, action, tone }) => (
+                <button key={`${action.type}-${action.location ?? 'self'}`} className={tone ? `map-action ${tone}` : 'map-action'} disabled={busy} onClick={() => runMapAction(action)}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {message && <div className="map-message">{message}</div>}
+          </div>
           <div className="map-legend">
             <LegendItem color="#7c5a31" label="Roads" />
             <LegendItem color="#5f9dad" label="Water" />
@@ -276,15 +382,19 @@ function WorldMap({
   onSelectRegion,
   settlements,
   environment,
+  focus,
+  onFocus,
 }: {
   overlay: Overlay;
   selectedRegionId: string;
   onSelectRegion: (id: string) => void;
   settlements: Settlement[];
   environment?: EnvironmentState;
+  focus: MapFocus;
+  onFocus: (focus: MapFocus) => void;
 }) {
   return (
-    <svg className="atlas-svg" viewBox="0 0 1000 620" role="img" aria-label="Auralis world map">
+    <svg className="atlas-svg" viewBox="0 0 1000 620" preserveAspectRatio="xMidYMin meet" role="img" aria-label="Auralis world map">
       <defs>
         <pattern id="mapGrid" width="24" height="24" patternUnits="userSpaceOnUse">
           <path d="M24 0H0V24" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
@@ -312,11 +422,11 @@ function WorldMap({
       })}
 
       {overlay === 'resources' && REGION_SHAPES.flatMap((region) => region.resources.map((resource) => (
-        <MapMarker key={`${region.id}-${resource.label}`} x={resource.x} y={resource.y} kind={resource.kind} label={resource.label} />
+        <MapMarker key={`${region.id}-${resource.label}`} x={resource.x} y={resource.y} kind={resource.kind} label={resource.label} selected={focus.id === `${region.id}-${resource.label}`} onSelect={() => onFocus(makeFocus('resource', `${region.id}-${resource.label}`, resource.label, `${resource.label} anchors ${region.label}'s ${resource.kind} economy.`, [region.label, resource.kind]))} />
       )))}
 
       {settlements.map((settlement, index) => (
-        <MapMarker key={settlement.id} x={500 + index * 24} y={306 + index * 12} kind="settlement" label={settlement.name} />
+        <MapMarker key={settlement.id} x={500 + index * 24} y={306 + index * 12} kind="settlement" label={settlement.name} selected={focus.id === settlement.id} onSelect={() => onFocus(makeFocus('settlement', settlement.id, settlement.name, `Population ${settlement.population}. Heartwell stability ${(settlement.resources.heartwellStability * 100).toFixed(0)}%, morale ${(settlement.resources.publicMorale * 100).toFixed(0)}%.`, ['settlement', settlement.regionId]))} />
       ))}
 
       {environment && overlay === 'pressure' && (
@@ -337,6 +447,8 @@ function RegionMap({
   quests,
   dungeons,
   environment,
+  focus,
+  onFocus,
 }: {
   shape: RegionShape;
   region?: Region;
@@ -345,10 +457,12 @@ function RegionMap({
   quests: Quest[];
   dungeons: DungeonRoom[];
   environment?: EnvironmentState;
+  focus: MapFocus;
+  onFocus: (focus: MapFocus) => void;
 }) {
   const resourceNodes = shape.resources;
   return (
-    <svg className="atlas-svg" viewBox="0 0 1000 620" role="img" aria-label={`${shape.label} region map`}>
+    <svg className="atlas-svg" viewBox="0 0 1000 620" preserveAspectRatio="xMidYMin meet" role="img" aria-label={`${shape.label} region map`}>
       <defs>
         <radialGradient id="regionWash" cx="50%" cy="48%" r="70%">
           <stop offset="0%" stopColor={shape.highColor} stopOpacity="0.78" />
@@ -372,10 +486,10 @@ function RegionMap({
         </g>
       )}
 
-      {resourceNodes.map((resource) => <MapMarker key={resource.label} x={resource.x + 18} y={resource.y + 20} kind={resource.kind} label={resource.label} />)}
-      {settlement && shape.id === settlement.regionId && <MapMarker x={506} y={318} kind="settlement" label={settlement.name} />}
-      {quests.slice(0, 5).map((quest, index) => <MapMarker key={quest.id} x={390 + index * 42} y={370 + (index % 2) * 40} kind="quest" label={quest.title} />)}
-      {dungeons.slice(0, 4).map((room, index) => <MapMarker key={room.id} x={610 + index * 34} y={420 - (index % 2) * 32} kind="dungeon" label={titleCase(room.type)} />)}
+      {resourceNodes.map((resource) => <MapMarker key={resource.label} x={resource.x + 18} y={resource.y + 20} kind={resource.kind} label={resource.label} selected={focus.id === `${shape.id}-${resource.label}`} onSelect={() => onFocus(makeFocus('resource', `${shape.id}-${resource.label}`, resource.label, `${resource.label} can support ${shape.label}'s ${resource.kind} supply chain when the roads stay open.`, [resource.kind, shape.label]))} />)}
+      {settlement && shape.id === settlement.regionId && <MapMarker x={506} y={318} kind="settlement" label={settlement.name} selected={focus.id === settlement.id} onSelect={() => onFocus(makeFocus('settlement', settlement.id, settlement.name, `Home settlement in ${shape.label}; population ${settlement.population}.`, ['home', 'Hearthwell']))} />}
+      {quests.slice(0, 5).map((quest, index) => <MapMarker key={quest.id} x={390 + index * 42} y={370 + (index % 2) * 40} kind="quest" label={quest.title} selected={focus.id === quest.id} onSelect={() => onFocus(makeFocus('quest', quest.id, quest.title, quest.description, [`urgency ${Math.round(quest.urgency * 100)}%`, `difficulty ${Math.round(quest.difficulty * 100)}%`, ...quest.tags.slice(0, 2)]))} />)}
+      {dungeons.slice(0, 4).map((room, index) => <MapMarker key={room.id} x={610 + index * 34} y={420 - (index % 2) * 32} kind="dungeon" label={titleCase(room.type)} selected={focus.id === room.id} onSelect={() => onFocus(makeFocus('dungeon', room.id, titleCase(room.type), room.description, [`difficulty ${Math.round(room.difficulty * 100)}%`, room.pressureSource, ...room.tags.slice(0, 2)]))} />)}
       <text x="500" y="72" className="map-title" textAnchor="middle">{shape.label}</text>
       <text x="500" y="98" className="map-subtitle" textAnchor="middle">{region?.climate ?? shape.elevation}</text>
     </svg>
@@ -389,6 +503,9 @@ function AreaMap({
   quests,
   dungeons,
   environment,
+  player,
+  focus,
+  onFocus,
 }: {
   overlay: Overlay;
   settlement?: Settlement;
@@ -396,6 +513,9 @@ function AreaMap({
   quests: Quest[];
   dungeons: DungeonRoom[];
   environment?: EnvironmentState;
+  player: PlayerState | null;
+  focus: MapFocus;
+  onFocus: (focus: MapFocus) => void;
 }) {
   const npcClusters = useMemo(() => {
     const jobs = ['farmer', 'merchant', 'guard', 'healer', 'crafter', 'adventurer'];
@@ -408,7 +528,7 @@ function AreaMap({
   }, [npcs]);
 
   return (
-    <svg className="atlas-svg" viewBox="0 0 1000 620" role="img" aria-label={`${settlement?.name ?? 'Vennholt'} area map`}>
+    <svg className="atlas-svg" viewBox="0 0 1000 620" preserveAspectRatio="xMidYMin meet" role="img" aria-label={`${settlement?.name ?? 'Vennholt'} area map`}>
       <rect width="1000" height="620" fill="#293b31" />
       <path d="M0 448 C200 412 346 430 510 408 C650 390 790 394 1000 356 L1000 620 L0 620 Z" fill="#526742" />
       <path d="M0 130 C126 96 246 118 342 178 C444 242 562 202 676 150 C792 96 888 116 1000 162 L1000 0 L0 0 Z" fill="#445f4c" />
@@ -418,7 +538,7 @@ function AreaMap({
       <path d="M512 318 C452 252 378 210 260 170" fill="none" stroke="#76532e" strokeWidth="10" strokeLinecap="round" opacity="0.82" />
 
       {AREA_LAYERS.map((area) => (
-        <g key={area.id}>
+        <g key={area.id} className="map-district" onClick={() => onFocus(makeFocus('district', area.id, area.label, districtDescription(area.id), [area.id, settlement?.name ?? 'Vennholt']))}>
           <ellipse cx={area.x} cy={area.y} rx={area.w / 2} ry={area.h / 2} fill={area.color} opacity={overlay === 'pressure' && area.id === 'rupture' ? 0.92 : 0.72} stroke="rgba(255,255,255,0.16)" strokeWidth="2" />
           <text x={area.x} y={area.y} className="map-area-label" textAnchor="middle">{area.label}</text>
         </g>
@@ -435,16 +555,17 @@ function AreaMap({
 
       {overlay === 'resources' && (
         <>
-          <MapMarker x={315} y={420} kind="food" label="Wheat" />
-          <MapMarker x={518} y={318} kind="hearth" label="Hearthwell" />
-          <MapMarker x={674} y={318} kind="trade" label="Market" />
-          <MapMarker x={250} y={168} kind="dungeon" label="Rupture" />
+          <MapMarker x={315} y={420} kind="food" label="Wheat" selected={focus.id === 'wheat'} onSelect={() => onFocus(makeFocus('resource', 'wheat', 'Wheat Terraces', 'Primary food reserve. Gather and delivery quests usually depend on this slope.', ['food', 'fields']))} />
+          <MapMarker x={518} y={318} kind="hearth" label="Hearthwell" selected={focus.id === 'hearthwell'} onSelect={() => onFocus(makeFocus('resource', 'hearthwell', 'Hearthwell', 'Social gravity and metaphysical stability source for the settlement.', ['stability', 'oaths']))} />
+          <MapMarker x={674} y={318} kind="trade" label="Market" selected={focus.id === 'market-resource'} onSelect={() => onFocus(makeFocus('resource', 'market-resource', 'Market Row', 'Coin, trade, rumor flow, and food exchange concentrate here.', ['trade', 'coin']))} />
+          <MapMarker x={250} y={168} kind="dungeon" label="Rupture" selected={focus.id === 'rupture-resource'} onSelect={() => onFocus(makeFocus('dungeon', 'rupture-resource', 'Subframe Rupture', 'A pressure leak below the civic layer. Delves reduce fear but cost health and stamina.', ['pressure', 'dungeon']))} />
         </>
       )}
 
-      {npcClusters.map((cluster) => cluster.count > 0 && <MapMarker key={cluster.job} x={cluster.x} y={cluster.y} kind="resident" label={`${titleCase(cluster.job)} x${cluster.count}`} />)}
-      {quests.slice(0, 4).map((quest, index) => <MapMarker key={quest.id} x={578 + index * 36} y={250 + (index % 2) * 34} kind="quest" label={quest.title} />)}
-      {dungeons.slice(0, 3).map((room, index) => <MapMarker key={room.id} x={250 + index * 28} y={168 + index * 24} kind="dungeon" label={titleCase(room.type)} />)}
+      {npcClusters.map((cluster) => cluster.count > 0 && <MapMarker key={cluster.job} x={cluster.x} y={cluster.y} kind="resident" label={`${titleCase(cluster.job)} x${cluster.count}`} selected={focus.id === `residents-${cluster.job}`} onSelect={() => onFocus(makeFocus('resident', `residents-${cluster.job}`, `${titleCase(cluster.job)} cluster`, `${cluster.count} residents are currently represented in this profession group.`, [cluster.job, 'residents']))} />)}
+      {quests.slice(0, 4).map((quest, index) => <MapMarker key={quest.id} x={578 + index * 36} y={250 + (index % 2) * 34} kind="quest" label={quest.title} selected={focus.id === quest.id} onSelect={() => onFocus(makeFocus('quest', quest.id, quest.title, quest.description, [`urgency ${Math.round(quest.urgency * 100)}%`, `difficulty ${Math.round(quest.difficulty * 100)}%`, ...quest.tags.slice(0, 2)]))} />)}
+      {dungeons.slice(0, 3).map((room, index) => <MapMarker key={room.id} x={250 + index * 28} y={168 + index * 24} kind="dungeon" label={titleCase(room.type)} selected={focus.id === room.id} onSelect={() => onFocus(makeFocus('dungeon', room.id, titleCase(room.type), room.description, [`difficulty ${Math.round(room.difficulty * 100)}%`, room.pressureSource]))} />)}
+      {player && <MapMarker x={PLAYER_AREA_POS[player.location][0]} y={PLAYER_AREA_POS[player.location][1] - 34} kind="player" label="You" selected={focus.kind === 'player'} onSelect={() => onFocus(makeFocus('player', player.id, player.name, `Currently in ${titleCase(player.location)} with ${Math.round(player.stamina * 100)}% stamina and ${Math.round(player.health * 100)}% health.`, [`level ${player.level}`, `${player.wealth.toFixed(0)} coin`]))} />}
 
       <text x="500" y="44" className="map-title" textAnchor="middle">{settlement?.name ?? 'Vennholt'} Area</text>
       <text x="500" y="70" className="map-subtitle" textAnchor="middle">roads, districts, residents, resources, and active pressures</text>
@@ -465,11 +586,13 @@ function TerrainLines({ region, seed }: { region: RegionShape; seed: string }) {
   );
 }
 
-function MapMarker({ x, y, kind, label }: { x: number; y: number; kind: string; label: string }) {
+function MapMarker({ x, y, kind, label, selected = false, onSelect }: { x: number; y: number; kind: string; label: string; selected?: boolean; onSelect?: () => void }) {
   const color = markerColor(kind);
   return (
-    <g className="map-marker" transform={`translate(${x} ${y})`}>
-      <circle r="10" fill={color} stroke="#101016" strokeWidth="3" />
+    <g className={onSelect ? selected ? 'map-marker interactive selected' : 'map-marker interactive' : 'map-marker'} transform={`translate(${x} ${y})`} onClick={(event) => { event.stopPropagation(); onSelect?.(); }}>
+      {kind === 'player' && <circle r="20" fill="none" stroke={color} strokeWidth="2" opacity="0.45" className="map-player-pulse" />}
+      {onSelect && <circle r="18" fill="transparent" />}
+      <circle r={selected ? 13 : 10} fill={color} stroke={selected ? '#f3e7b0' : '#101016'} strokeWidth="3" />
       <circle r="4" fill="#fff" opacity="0.8" />
       <text x="15" y="4" className="map-marker-label">{label}</text>
     </g>
@@ -485,7 +608,39 @@ function markerColor(kind: string): string {
   if (kind === 'trade' || kind === 'coin') return '#c89c4b';
   if (kind === 'hearth' || kind === 'settlement') return '#ffcf74';
   if (kind === 'quest') return '#c85c5c';
+  if (kind === 'player') return '#ffffff';
   return '#4fa8c8';
+}
+
+function districtDescription(id: string): string {
+  if (id === 'plaza') return 'Public oath space, civic announcements, and the visible mouth of the Hearthwell.';
+  if (id === 'market') return 'Trade, gossip, food exchange, and coin pressure gather here.';
+  if (id === 'fields') return 'Food production terrace; poor weather and soil chemistry show up here first.';
+  if (id === 'homes') return 'Household ring where family needs, reputation, and rest cycles are centered.';
+  if (id === 'grove') return 'Wild edge for gathering, herbs, and encounters beyond town certainty.';
+  if (id === 'watch') return 'Guard perimeter and early warning line against dungeon pressure.';
+  return 'A subframe leak where memory, fear, and physical pressure distort the civic map.';
+}
+
+function computeRouteReadiness(mode: MapMode, overlay: Overlay, environment?: EnvironmentState, player?: PlayerState | null, selectedShape?: RegionShape) {
+  const stamina = player?.stamina ?? 0.65;
+  const health = player?.health ?? 0.8;
+  const rain = environment?.physics.rainfallMm ?? 0;
+  const wind = environment?.physics.windSpeedMps ?? 0;
+  const corrosion = environment?.chemistry.corrosion ?? 0;
+  const modeRisk = mode === 'area' ? 0.08 : mode === 'region' ? 0.18 : 0.28;
+  const overlayRisk = overlay === 'pressure' ? 0.18 : overlay === 'climate' ? 0.1 : 0.04;
+  const weatherRisk = Math.min(0.28, rain / 28 + wind / 80 + corrosion * 0.22);
+  const readiness = Math.max(0.08, Math.min(1, stamina * 0.58 + health * 0.32 + 0.22 - modeRisk - overlayRisk - weatherRisk));
+  const label = readiness > 0.68 ? 'Clear Route' : readiness > 0.38 ? 'Cautious Route' : 'Danger Route';
+  const color = readiness > 0.68 ? '#5c8c6c' : readiness > 0.38 ? '#c8a84b' : '#c85c5c';
+  const place = mode === 'world' ? 'regional crossing' : mode === 'region' ? selectedShape?.label ?? 'region' : 'local district';
+  const note = readiness > 0.68
+    ? `Good conditions for a ${place} move. Use the map actions to travel, gather, trade, or scout.`
+    : readiness > 0.38
+      ? `The ${place} is workable, but weather and stamina can turn small errands into pressure.`
+      : `Poor expedition window. Rest or stay near town before pushing deeper.`;
+  return { readiness, label, color, note };
 }
 
 function MapStat({ label, value }: { label: string; value: string }) {
